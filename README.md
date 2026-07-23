@@ -9,7 +9,7 @@ Migration Assistant
 
 > [!IMPORTANT]
 > **Before using this plugin, please create your own backup of all relevant files.** Migration Assistant is provided "as is" - use at your own risk.<br>
-> If you use [Ratings Light](https://github.com/AF-1/lms-ratingslight) and/or [Alternative PlayC ount](https://github.com/AF-1/lms-alternativeplaycount), please also create their own plugin backups before migrating - see below for why.
+> If you use [Ratings Light](https://github.com/AF-1/lms-ratingslight) and/or [Alternative Play Count](https://github.com/AF-1/lms-alternativeplaycount), please also create their own plugin backups before migrating - see below for why.
 
 <br><br>
 
@@ -48,7 +48,7 @@ A backup archive includes:
 
 ## Installation
 
-If you want to test a new patch that hasn't made it into a release version yet, you'll have to [install the plugin manually](https://github.com/AF-1/sobras/wiki/Manual-installation-of-LMS-plugins).
+For now, you'll have to [install the plugin manually](https://github.com/AF-1/sobras/wiki/Manual-installation-of-LMS-plugins).
 <br><br><br><br>
 
 
