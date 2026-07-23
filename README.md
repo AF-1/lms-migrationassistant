@@ -8,7 +8,7 @@ Migration Assistant
 <br><br>
 
 > [!IMPORTANT]
-> **Before using this plugin, please create your own backup of all relevant files.** Migration Assistant is provided "as is" - use at your own risk.
+> **Before using this plugin, please create your own backup of all relevant files.** Migration Assistant is provided "as is" - use at your own risk.<br>
 > If you use [Ratings Light](https://github.com/AF-1/lms-ratingslight) and/or [Alternative PlayC ount](https://github.com/AF-1/lms-alternativeplaycount), please also create their own plugin backups before migrating - see below for why.
 
 <br><br>
