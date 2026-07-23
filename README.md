@@ -1,0 +1,63 @@
+Migration Assistant
+====
+![Min. LMS Version](https://img.shields.io/badge/Min.%20LMS%20Version%20Required-v9.1-darkgreen)<br>
+
+<img src="MigrationAssistant/HTML/EN/plugins/MigrationAssistant/html/images/miga_icon_svg.png" align="right" width="70px">**Migration Assistant (MIGA)** creates a portable backup of your Lyrion Music Server (LMS) configuration and lets you selectively restore it on the same or a new installation. It's meant for anyone moving LMS to new hardware, a new OS or a fresh install, without having to manually reconfigure everything from scratch.<br clear="right">
+
+<a href="https://github.com/AF-1/">⬅️ <b>Back to the list of all plugins</b></a>
+<br><br>
+
+> [!IMPORTANT]
+> **Before using this plugin, please create your own backup of all relevant files.** Migration Assistant is provided "as is" - use at your own risk.
+> If you use [Ratings Light](https://github.com/AF-1/lms-ratingslight) and/or [Alternative PlayC ount](https://github.com/AF-1/lms-alternativeplaycount), please also create their own plugin backups before migrating - see below for why.
+
+<br><br>
+
+## Backup
+
+A backup archive includes:
+
+- LMS server preferences and all installed plugins' preferences
+- a small selection of per-track values: date added, play count, last played
+- your playlist folder (recursively, including subfolders), split into media playlists, text files and other files
+- OPML/Favorites files
+- `log.conf`
+- the Graphics, HTML, and IR custom folders
+- any additional custom folders you specify (e.g. a plugin's data folder), with a configurable target path for restoring to a different location
+- the data folders of AlternativePlayCount, CustomSkip, DynamicPlaylists, DynamicPlaylistCreator, RatingsLight and VirtualLibraryCreator
+
+**Not included, on purpose:**
+
+- **`library.db` and `persist.db`** - these aren't backed up. They're large, and there's no need: `library.db` is rebuilt correctly by the rescan that follows a fresh install or a restore anyway, and the per-track values Migration Assistant does carry over (date added, play count, last played) are restored directly into `persist.db`. Ratings and extended play count data are better restored through the backup/restore features of Ratings Light and Alternative Play Count, which is why I recommend backing those up separately beforehand.
+- **Protected system folders** - the LMS preferences folder, cache folder, Plugins folder and your configured media library folders can't be added as custom backup paths, since backing them up this way could conflict with, duplicate or corrupt data that's already handled elsewhere.
+- **Folders that duplicate a plugin's own data folder** - if a custom path you enter matches a data folder already covered automatically (see list above), it's skipped to avoid backing it up twice.
+
+<br><br>
+
+## Restore
+
+**Restoring onto a freshly installed server?** Install LMS first and complete the setup wizard, setting your media folder path(s) and playlist folder path. Wait until the initial library scan has **fully** completed. Only then install the plugins you want to use - and only after that, continue with the steps below.
+
+1. Point Migration Assistant at a previously created backup archive.
+2. Preview its contents and choose exactly which items to restore - nothing is restored automatically or all-or-nothing.
+3. After restoring, restart LMS for the changes to take effect. If anything you restored requires a library *rescan*, you'll be told so after the restore completes and need to trigger it manually.
+
+<br><br><br>
+
+
+
+## Installation
+
+If you want to test a new patch that hasn't made it into a release version yet, you'll have to [install the plugin manually](https://github.com/AF-1/sobras/wiki/Manual-installation-of-LMS-plugins).
+<br><br><br><br>
+
+
+## Report a new issue
+
+To report a new issue please file a GitHub [**issue report**](https://github.com/AF-1/lms-migrationassistant/issues/new/choose).
+<br><br><br>
+
+---
+
+If this project was useful to you, you can star the repository using the <img src="screenshots/githubstar.png" width="20" height="20" alt="star" /> button in the top-right corner of this page.
+<br><br><br>

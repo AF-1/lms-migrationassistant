@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<extension>
+	<id>af6e029c-6bf4-284e-1567-3155e53683e0</id>
+	<name>PLUGIN_MIGRATIONSASSISTANT</name>
+	<module>Plugins::MigrationAssistant::Plugin</module>
+	<version>0.0.1</version>
+	<description>PLUGIN_MIGRATIONSASSISTANT_DESC</description>
+	<creator>AF</creator>
+	<optionsURL>plugins/MigrationAssistant/settings/backup.html</optionsURL>
+	<icon>plugins/MigrationAssistant/html/images/miga_icon_svg.png</icon>
+	<homepageURL>https://github.com/AF-1/lms-migrationassistant</homepageURL>
+	<defaultState>enabled</defaultState>
+	<targetApplication>
+		<id>Lyrion Music Server</id>
+		<minVersion>9.1</minVersion>
+		<maxVersion>*</maxVersion>
+	</targetApplication>
+</extension>

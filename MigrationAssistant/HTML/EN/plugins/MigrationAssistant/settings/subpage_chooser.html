@@ -1,0 +1,12 @@
+<style>.faqlink{padding-left:30px;}#subpage{color:#4a90d9;}</style>
+<br>
+[% IF subpages.size>1 %]
+[% WRAPPER settingGroup title="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_SUBPAGE" desc="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_SUBPAGE_DESC" %]
+	<select class="stdedit" name="subpage" id="subpage" onchange="location.href=options[selectedIndex].value">
+		[% FOREACH option = subpages.keys.sort %]
+			<option [% IF subpage == option %]selected[% END %] value="[% subpages.$option %]">[% option | getstring %]</option>
+		[%- END -%]
+	</select> <span class="faqlink"><a href="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_FAQ_LINK" | string %]" target="_blank" rel="noopener noreferrer"><b>[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_FAQ_LINK_TEXT" | string %]</b></a></span>
+[% END %]
+<br>
+[% END %]
