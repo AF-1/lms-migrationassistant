@@ -176,6 +176,9 @@ PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOZIPFILE
 PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_FILENOTFOUND
 	EN	The selected file could not be found.
 
+PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOITEMS
+	EN	This archive was read successfully but does not contain any recognizable Migration Assistant backup content.
+
 PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS
 	EN	Restore completed. Please restart Lyrion Music Server now for the changes to take effect.
 

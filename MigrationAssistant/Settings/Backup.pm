@@ -36,12 +36,7 @@ sub currentPage {
 }
 
 sub pages {
-	my %page = (
-		'name' => Slim::Web::HTTP::CSRF->protectName('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP'),
-		'page' => page(),
-	);
-	my @pages = (\%page);
-	return \@pages;
+	return [{ 'name' => Slim::Web::HTTP::CSRF->protectName('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP'), 'page' => page() }];
 }
 
 sub prefs {

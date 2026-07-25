@@ -36,12 +36,7 @@ sub currentPage {
 }
 
 sub pages {
-	my %page = (
-		'name' => name(),
-		'page' => page(),
-	);
-	my @pages = (\%page);
-	return \@pages;
+	return [{ 'name' => name(), 'page' => page() }];
 }
 
 sub prefs {
@@ -75,31 +70,35 @@ sub handler {
 			$prefs->set('restorefile', $selectedfile);
 			$paramRef->{'restorefilefolder'} = $selectedfile;
 			my $archiveContents = Plugins::MigrationAssistant::Plugin::listBackupContents($selectedfile);
-			my %categoryCounts;
-			$categoryCounts{$_->{'category'}}++ for @{$archiveContents};
-			$paramRef->{'restorecategorycounts'} = \%categoryCounts;
+			if (!@{$archiveContents}) {
+				$paramRef->{'restorenoitems'} = 1;
+			} else {
+				my %categoryCounts;
+				$categoryCounts{$_->{'category'}}++ for @{$archiveContents};
+				$paramRef->{'restorecategorycounts'} = \%categoryCounts;
 
-			if ($paramRef->{'restore'}) {
-				my %selectedNamespaces;
-				for my $item (@{$archiveContents}) {
-					$selectedNamespaces{$item->{'namespace'}} = 1 if $paramRef->{"pref_selected_$item->{'namespace'}"};
-				}
-				main::DEBUGLOG && $log->is_debug && $log->debug('selected namespaces = '.Data::Dump::dump(\%selectedNamespaces));
-				main::DEBUGLOG && $log->is_debug && $log->debug('restore params = '.Data::Dump::dump([ grep { /^pref_selected_/ } keys %$paramRef ]));
+				if ($paramRef->{'restore'}) {
+					my %selectedNamespaces;
+					for my $item (@{$archiveContents}) {
+						$selectedNamespaces{$item->{'namespace'}} = 1 if $paramRef->{"pref_selected_$item->{'namespace'}"};
+					}
+					main::DEBUGLOG && $log->is_debug && $log->debug('selected namespaces = '.Data::Dump::dump(\%selectedNamespaces));
+					main::DEBUGLOG && $log->is_debug && $log->debug('restore params = '.Data::Dump::dump([ grep { /^pref_selected_/ } keys %$paramRef ]));
 
-				if (%selectedNamespaces) {
-					my ($restoreOk, undef, $anyNamespaceRestored) = Plugins::MigrationAssistant::Plugin::restoreFromBackup(\%selectedNamespaces);
-					unless ($restoreOk) {
-						$paramRef->{'restoreerror'} = 1;
-						# keep showing the list on failure so the user can retry without listing again
+					if (%selectedNamespaces) {
+						my ($restoreOk, undef, $anyNamespaceRestored) = Plugins::MigrationAssistant::Plugin::restoreFromBackup(\%selectedNamespaces);
+						unless ($restoreOk) {
+							$paramRef->{'restoreerror'} = 1;
+							# keep showing the list on failure so the user can retry without listing again
+							$paramRef->{'restorearchivecontents'} = $archiveContents;
+						}
+					} else {
+						# nothing selected - just display the list again
 						$paramRef->{'restorearchivecontents'} = $archiveContents;
 					}
 				} else {
-					# nothing selected - just display the list again
 					$paramRef->{'restorearchivecontents'} = $archiveContents;
 				}
-			} else {
-				$paramRef->{'restorearchivecontents'} = $archiveContents;
 			}
 		}
 	}

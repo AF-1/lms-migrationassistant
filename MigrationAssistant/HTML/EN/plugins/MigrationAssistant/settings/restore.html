@@ -35,7 +35,9 @@
 	[% IF restoremissingfile || restoreerror %]
 	<span style="padding-left:5px;color:red;">[% IF restoremissingfile == 1 %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_MISSINGFILE" | string %][% ELSIF restoremissingfile == 2 %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOZIPFILE" | string %][% ELSIF restoremissingfile == 3 %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_FILENOTFOUND" | string %][% ELSE %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ERROR" | string %][% END %]</span>
 	[% END %]
-
+[% IF restorenoitems %]
+	<span style="padding-left:5px;color:red;">[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOITEMS" | string %]</span>
+	[% END %]
 	[% BLOCK restorecategorytable %]
 	<table class="migarestoretable">
 		[% FOREACH item = restorearchivecontents %]

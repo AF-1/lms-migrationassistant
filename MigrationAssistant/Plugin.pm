@@ -37,7 +37,7 @@ my $log = Slim::Utils::Log->addLogCategory({
 my $serverPrefs = preferences('server');
 my $prefs = preferences('plugin.migrationassistant');
 
-my ($tpBackupParser, $tpBackupParserNB, $tpRestoreFH, $tpOpened, $tpInTrack, $tpInValue, $tpCurrentKey, $tpRestoreCount, $tpRestoreStarted, $tpRestoreFile, $tpRestoreDateAdded, $tpRestorePlayCountLastPlayed, $tpTotalTrackCount, $tpProcessedTrackCount, $tpRestoreErrors, $bkpZip, $bkpFile, $bkpTempDir, $bkpOutput, $bkpTotalTrackCount, $bkpProcessedTrackCount, $bkpStarted, $bkpErrors);
+my ($tpBackupParser, $tpBackupParserNB, $tpRestoreFH, $tpOpened, $tpInTrack, $tpInValue, $tpCurrentKey, $tpRestoreCount, $tpRestoreStarted, $tpRestoreFile, $tpRestoreDateAdded, $tpRestorePlayCountLastPlayed, $tpTotalTrackCount, $tpProcessedTrackCount, $tpRestoreErrors, $tpRestoreDone, $bkpZip, $bkpFile, $bkpTempDir, $bkpOutput, $bkpTotalTrackCount, $bkpProcessedTrackCount, $bkpStarted, $bkpErrors);
 my @bkpPersistentTracks;
 my %tpRestoreItem;
 our @OUR_PLUGIN_DATA_FOLDERS;
@@ -1076,6 +1076,7 @@ sub _tpRestoreScanFunction {
 		$tpOpened = 1;
 		$tpInTrack = 0;
 		$tpInValue = 0;
+		$tpRestoreDone = 0;
 		%tpRestoreItem = ();
 		$tpCurrentKey = undef;
 
@@ -1101,6 +1102,7 @@ sub _tpRestoreScanFunction {
 				last;
 			}
 		}
+		my $reachedEOF = eof($tpRestoreFH);
 		$line //= '';
 		$line =~ s/&#(\d*);/escape(chr($1))/ge;
 		eval { $tpBackupParserNB->parse_more($line) };
@@ -1110,8 +1112,17 @@ sub _tpRestoreScanFunction {
 			_tpDoneScanning();
 			return 0;
 		}
-
-		return defined($tpBackupParserNB) ? 1 : 0;
+		if ($tpRestoreDone) {
+			_tpDoneScanning();
+			return 0;
+		}
+		if ($reachedEOF) {
+			$log->error('Backup file ended unexpectedly before the closing </TracksPersistentSelectiveStats> tag was found - the file may be incomplete, corrupted, or not a valid backup file.');
+			$tpRestoreErrors++;
+			_tpDoneScanning();
+			return 0;
+		}
+		return 1;
 	}
 
 	$log->warn('No tpBackupParserNB defined!');
@@ -1274,8 +1285,7 @@ sub _tpHandleEndElement {
 		%tpRestoreItem = ();
 	}
 	if ($element eq 'TracksPersistentSelectiveStats') {
-		_tpDoneScanning();
-		return 0;
+		$tpRestoreDone = 1;
 	}
 }
 
