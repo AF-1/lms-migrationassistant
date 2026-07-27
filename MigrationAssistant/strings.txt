@@ -102,7 +102,7 @@ PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_THIRDPARTY
 	EN	Third-Party Plugins: Settings
 
 PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_NOTINSTALLED
-	EN	Other Plugins (not currently installed): Settings
+	EN	Other Plugins (not installed at backup time): Settings
 
 PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SKIPPREFS
 	EN	Skip preferences during restore (optional)
@@ -178,6 +178,9 @@ PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_FILENOTFOUND
 
 PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOITEMS
 	EN	This archive was read successfully but does not contain any recognizable Migration Assistant backup content.
+
+PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE
+	EN	Target folder is not writable on this system - this item will be skipped during restore.
 
 PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS
 	EN	Restore completed. Please restart Lyrion Music Server now for the changes to take effect.

@@ -37,7 +37,7 @@ my $log = Slim::Utils::Log->addLogCategory({
 my $serverPrefs = preferences('server');
 my $prefs = preferences('plugin.migrationassistant');
 
-my ($tpBackupParser, $tpBackupParserNB, $tpRestoreFH, $tpOpened, $tpInTrack, $tpInValue, $tpCurrentKey, $tpRestoreCount, $tpRestoreStarted, $tpRestoreFile, $tpRestoreDateAdded, $tpRestorePlayCountLastPlayed, $tpTotalTrackCount, $tpProcessedTrackCount, $tpRestoreErrors, $tpRestoreDone, $bkpZip, $bkpFile, $bkpTempDir, $bkpOutput, $bkpTotalTrackCount, $bkpProcessedTrackCount, $bkpStarted, $bkpErrors);
+my ($tpBackupParser, $tpBackupParserNB, $tpRestoreFH, $tpOpened, $tpInTrack, $tpInValue, $tpCurrentKey, $tpRestoreCount, $tpRestoreStarted, $tpRestoreFile, $tpRestoreDateAdded, $tpRestorePlayCountLastPlayed, $tpTotalTrackCount, $tpProcessedTrackCount, $tpRestoreErrors, $tpUnidentifiableCount, $tpUnmatchedCount, $tpRestoreDone, $bkpZip, $bkpFile, $bkpTempDir, $bkpOutput, $bkpTotalTrackCount, $bkpProcessedTrackCount, $bkpStarted, $bkpErrors);
 my @bkpPersistentTracks;
 my %tpRestoreItem;
 our @OUR_PLUGIN_DATA_FOLDERS;
@@ -272,11 +272,12 @@ sub _backupLogConf {
 
 sub _backupExtraSystemFolders {
 	for my $dirType (qw(Graphics HTML IR)) {
-		my ($sourceDir) = Slim::Utils::OSDetect::dirsFor($dirType);
-		next unless $sourceDir && -d $sourceDir;
+		# only back up if this OS provides a genuine per-user custom directory separate from its stock resource directory (currently only true on macOS)
+		my @dirs = Slim::Utils::OSDetect::dirsFor($dirType);
+		next unless @dirs > 1 && -d $dirs[0];
 
-		my $added = _backupDirToZip($sourceDir, "extrafiles/\L$dirType");
-		main::INFOLOG && $log->is_info && $log->info("Backed up $added file(s) from $dirType folder: $sourceDir") if $added;
+		my $added = _backupDirToZip($dirs[0], "extrafiles/\L$dirType");
+		main::INFOLOG && $log->is_info && $log->info("Backed up $added file(s) from $dirType folder: $dirs[0]") if $added;
 	}
 }
 
@@ -544,14 +545,15 @@ sub listBackupContents {
 		}
 	}
 
+	my $playlistDirWritable = _isTargetWritable($serverPrefs->get('playlistdir'));
 	if ($hasPlaylistBucket{'media'}) {
-		push @contents, { namespace => 'playlists_media', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_MEDIA_LABEL'), checked => 1 };
+		push @contents, { namespace => 'playlists_media', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_MEDIA_LABEL'), checked => 1, writable => $playlistDirWritable };
 	}
 	if ($hasPlaylistBucket{'text'}) {
-		push @contents, { namespace => 'playlists_text', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_TEXT_LABEL'), checked => 1 };
+		push @contents, { namespace => 'playlists_text', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_TEXT_LABEL'), checked => 1, writable => $playlistDirWritable };
 	}
 	if ($hasPlaylistBucket{'other'}) {
-		push @contents, { namespace => 'playlists_other', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_OTHER_LABEL'), checked => 1 };
+		push @contents, { namespace => 'playlists_other', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_OTHER_LABEL'), checked => 1, writable => $playlistDirWritable };
 	}
 	if ($hasOpml) {
 		push @contents, { namespace => 'opmlfiles', category => 'server', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_OPMLFILES_LABEL'), checked => 1 };
@@ -559,9 +561,11 @@ sub listBackupContents {
 	if ($hasLogConf) {
 		push @contents, { namespace => 'logconf', category => 'server', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_LOGCONF_LABEL'), checked => 1 };
 	}
+	my %extraSystemDirTypeNames = (graphics => 'Graphics', html => 'HTML', ir => 'IR');
 	for my $dirType (qw(graphics html ir)) {
 		next unless $hasExtraSystem{$dirType};
-		push @contents, { namespace => "extrafiles_$dirType", category => 'server', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_EXTRAFILES_'.uc($dirType).'_LABEL'), checked => 1 };
+		my ($targetDir) = Slim::Utils::OSDetect::dirsFor($extraSystemDirTypeNames{$dirType});
+		push @contents, { namespace => "extrafiles_$dirType", category => 'server', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_EXTRAFILES_'.uc($dirType).'_LABEL'), checked => 1, writable => _isTargetWritable($targetDir) };
 	}
 
 	my %customPathInfo;
@@ -574,7 +578,8 @@ sub listBackupContents {
 	}
 	for my $idx (sort { $a <=> $b } keys %customPathIndices) {
 		my $label = $customPathInfo{$idx} ? $customPathInfo{$idx}{'source'} : "custom path $idx";
-		push @contents, { namespace => "custompath_$idx", category => 'custompaths', label => $label, checked => 1 };
+		my $target = $customPathInfo{$idx} ? ($customPathInfo{$idx}{'target'} || $customPathInfo{$idx}{'source'}) : undef;
+		push @contents, { namespace => "custompath_$idx", category => 'custompaths', label => $label, checked => 1, writable => _isTargetWritable($target) };
 	}
 
 	for my $shortName (sort keys %ourPluginShortNames) {
@@ -589,6 +594,13 @@ sub listBackupContents {
 	}
 
 	return \@contents;
+}
+
+sub _extractMemberContent {
+	my $member = shift;
+	my $content = eval { $member->contents };
+	$log->error("Could not extract ".$member->fileName." from backup archive: ".($@ || 'unknown error')) unless defined $content;
+	return $content;
 }
 
 sub _isJunkZipEntry {
@@ -672,11 +684,11 @@ sub restoreFromBackup {
 	}
 
 	if ($prefs->get('status_backuprestore')) {
-		$log->warn('A backup or restore is already in progress, please wait for it to finish');
+		$log->error('A backup or restore is already in progress, please wait for it to finish');
 		return (0, 0);
 	}
 	if (Slim::Music::Import->stillScanning) {
-		$log->warn('Cannot restore from backup while a library scan is in progress');
+		$log->error('Cannot restore from backup while a library scan is in progress');
 		return (0, 0);
 	}
 
@@ -693,11 +705,20 @@ sub restoreFromBackup {
 	$prefs->set('restoreNeedsReload', 0);
 
 	my $skipPrefs = _parseRestoreSkipPrefs($prefs->get('restoreskipprefs'));
+	my %restoredOurPluginFolders;
 	my $defaultSkipPrefs = _defaultSkipPrefsHash();
 	my $tempDir = tempdir(CLEANUP => 1);
+
+	# prefs dir
 	my $prefsDir = Slim::Utils::Prefs::dir() || Slim::Utils::OSDetect::dirsFor('prefs');
 	my $pluginPrefsDir = catdir($prefsDir, 'plugin');
-	my %restoredOurPluginFolders;
+	unless (_isTargetWritable($prefsDir)) {
+		$log->error("Cannot restore - preferences folder $prefsDir is not writable on this system, aborting restore");
+		$prefs->set('status_backuprestore', 0);
+		return (0, 0);
+	}
+
+	# custom paths
 	my %customPathTargets;
 	for my $manifestMember ($zip->members) {
 		if ($manifestMember->fileName eq 'custompaths/manifest.txt') {
@@ -709,11 +730,32 @@ sub restoreFromBackup {
 			last;
 		}
 	}
+	for my $pathIdx (keys %customPathTargets) {
+		next unless $selectedNamespaces->{"custompath_$pathIdx"};
+		unless (_isTargetWritable($customPathTargets{$pathIdx})) {
+			$log->error("Cannot restore custom path $customPathTargets{$pathIdx} - target folder is not writable on this system, skipping this category");
+			delete $customPathTargets{$pathIdx};
+		}
+	}
 
+	# playlist dir
 	my $playlistDir = $serverPrefs->get('playlistdir');
+	if ($playlistDir && grep { $selectedNamespaces->{$_} } qw(playlists_media playlists_text playlists_other)) {
+		unless (_isTargetWritable($playlistDir)) {
+			$log->error("Cannot restore playlist folder contents - target folder $playlistDir is not writable on this system, skipping this category");
+			undef $playlistDir;
+		}
+	}
+
+	# extra system dirs
 	my %extraSystemDirs;
 	for my $dirType (qw(Graphics HTML IR)) {
 		my ($dir) = Slim::Utils::OSDetect::dirsFor($dirType);
+		next unless $dir && -d $dir;
+		if ($selectedNamespaces->{'extrafiles_'.lc($dirType)} && !_isTargetWritable($dir)) {
+			$log->error("Cannot restore $dirType files - target folder $dir is not writable on this system, skipping this category");
+			next;
+		}
 		$extraSystemDirs{lc($dirType)} = $dir;
 	}
 
@@ -731,7 +773,9 @@ sub restoreFromBackup {
 		next if $ns eq 'plugin.migrationassistant';
 		my $namespacePrefs = preferences($ns);
 		eval { $namespacePrefs->{'readonly'} = 1 };
+		$log->error("Could not set namespace $ns readonly during restore: $@") if $@;
 		eval { $namespacePrefs->savenow };
+		$log->error("Could not lock namespace $ns during restore (savenow failed): $@") if $@;
 	}
 
 	my $serverNamespaceRestored = 0;
@@ -749,21 +793,21 @@ sub restoreFromBackup {
 			$ext = lc($ext || '');
 			my $bucket = ($ext =~ /^(?:m3u|m3u8|pls|cue)$/) ? 'media' : ($ext eq 'txt' ? 'text' : 'other');
 			if ($selectedNamespaces->{"playlists_$bucket"} && $playlistDir) {
-				my $content = eval { $member->contents };
+				my $content = _extractMemberContent($member);
 				_safeWriteFile(catfile($playlistDir, split(m{/}, $relPath)), $content) if defined $content;
 			}
 			next;
 		}
 		if ($fileName =~ m{^opmlfiles/(.+)$}) {
 			if ($selectedNamespaces->{'opmlfiles'}) {
-				my $content = eval { $member->contents };
+				my $content = _extractMemberContent($member);
 				_safeWriteFile(catfile($prefsDir, $1), $content) if defined $content;
 			}
 			next;
 		}
 		if ($fileName eq 'log.conf') {
 			if ($selectedNamespaces->{'logconf'}) {
-				my $content = eval { $member->contents };
+				my $content = _extractMemberContent($member);
 				_safeWriteFile(catfile($prefsDir, 'log.conf'), $content) if defined $content;
 			}
 			next;
@@ -771,7 +815,7 @@ sub restoreFromBackup {
 		if ($fileName =~ m{^extrafiles/(graphics|html|ir)/(.+)$}) {
 			my ($dirType, $relPath) = ($1, $2);
 			if ($selectedNamespaces->{"extrafiles_$dirType"} && $extraSystemDirs{$dirType}) {
-				my $content = eval { $member->contents };
+				my $content = _extractMemberContent($member);
 				_safeWriteFile(catfile($extraSystemDirs{$dirType}, split(m{/}, $relPath)), $content) if defined $content;
 			}
 			next;
@@ -779,7 +823,7 @@ sub restoreFromBackup {
 		if ($fileName =~ m{^custompaths/(\d+)/(.+)$}) {
 			my ($pathIdx, $relPath) = ($1, $2);
 			if ($selectedNamespaces->{"custompath_$pathIdx"} && $customPathTargets{$pathIdx}) {
-				my $content = eval { $member->contents };
+				my $content = _extractMemberContent($member);
 				_safeWriteFile(catfile($customPathTargets{$pathIdx}, split(m{/}, $relPath)), $content) if defined $content;
 			}
 			next;
@@ -788,7 +832,7 @@ sub restoreFromBackup {
 			my ($shortName, $folderBaseName, $relPath) = ($1, $2, $3);
 			if ($selectedNamespaces->{"ourplugindata_$shortName"}) {
 				my $targetDir = catdir($prefsDir, $folderBaseName);
-				my $content = eval { $member->contents };
+				my $content = _extractMemberContent($member);
 				if (defined $content && _safeWriteFile(catfile($targetDir, split(m{/}, $relPath)), $content)) {
 					$restoredOurPluginFolders{$shortName} = $targetDir;
 				}
@@ -960,6 +1004,18 @@ sub _requeuePendingRescanAfterRestart {
 	main::INFOLOG && $log->is_info && $log->info('Re-queued rescan request after restart, following a preferences restore');
 }
 
+sub _isTargetWritable {
+	my $dir = shift;
+	return 0 unless $dir;
+
+	while ($dir && !-d $dir) {
+		my $parentDir = dir($dir)->parent->stringify;
+		last if $parentDir eq $dir;
+		$dir = $parentDir;
+	}
+	return $dir && -w $dir;
+}
+
 sub _safeWriteFile {
 	my ($destPath, $content) = @_;
 
@@ -1011,6 +1067,8 @@ sub _initTracksPersistentRestore {
 	$tpTotalTrackCount = _getTracksPersistentBackupTrackCount($xmlFile);
 	$tpProcessedTrackCount = 0;
 	$tpRestoreErrors = 0;
+	$tpUnidentifiableCount = 0;
+	$tpUnmatchedCount = 0;
 
 	if (defined($tpBackupParserNB)) {
 		eval { $tpBackupParserNB->parse_done };
@@ -1083,7 +1141,7 @@ sub _tpRestoreScanFunction {
 		if (defined $tpBackupParser) {
 			$tpBackupParserNB = $tpBackupParser->parse_start();
 		} else {
-			$log->warn('No tpBackupParser was defined!');
+			$log->error('No tpBackupParser was defined!');
 		}
 	}
 
@@ -1125,7 +1183,7 @@ sub _tpRestoreScanFunction {
 		return 1;
 	}
 
-	$log->warn('No tpBackupParserNB defined!');
+	$log->error('No tpBackupParserNB defined!');
 	_finishRestore(2);
 	return 0;
 }
@@ -1150,6 +1208,12 @@ sub _tpDoneScanning {
 	$tpRestoreFH = undef;
 
 	main::INFOLOG && $log->is_info && $log->info('tracks_persistent restore completed after '.(time() - $tpRestoreStarted).' seconds. Restored '.$tpRestoreCount.($tpRestoreCount == 1 ? ' track.' : ' tracks.'));
+	my $tpFailedCount = $tpUnidentifiableCount + $tpUnmatchedCount;
+	if ($tpFailedCount && !$tpRestoreCount) {
+		$log->error("Track statistics restore matched 0 of $tpProcessedTrackCount track(s) in the backup to a track in the current library - nothing was restored.");
+	} elsif ($tpFailedCount) {
+		$log->warn("Track statistics restore could not match $tpFailedCount of $tpProcessedTrackCount track(s) in the backup to a track in the current library - their values were skipped.");
+	}
 	_finishRestore($tpRestoreErrors > 0 ? 2 : ($prefs->get('restorependingrescan') ? 3 : 1));
 }
 
@@ -1214,7 +1278,8 @@ sub _tpHandleEndElement {
 		}
 
 		if (!$trackURL && !$backupTrackURLmd5 && !$trackMBID) {
-			$log->warn("No valid urlmd5, url or musicbrainz id for this track - can't restore values. Backup URL was: ".Data::Dump::dump($fullTrackURL));
+			$tpUnidentifiableCount++;
+			main::DEBUGLOG && $log->is_debug && $log->debug("No valid urlmd5, url or musicbrainz id for this track - can't restore values. Backup URL was: ".Data::Dump::dump($fullTrackURL));
 		} else {
 			my (@setParts, @bindVals);
 			if ($tpRestoreDateAdded) {
@@ -1272,10 +1337,12 @@ sub _tpHandleEndElement {
 							$log->error("Database error: $@");
 							$tpRestoreErrors++;
 						} elsif ($rowsAffected && $rowsAffected > 0) {
+							$updated = 1;
 							$tpRestoreCount++;
 						}
 					}
 				}
+				$tpUnmatchedCount++ unless $updated;
 			}
 		}
 		$tpProcessedTrackCount++;

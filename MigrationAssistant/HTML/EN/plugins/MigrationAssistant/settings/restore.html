@@ -8,6 +8,7 @@
 	.migastatus{color:var(--miga-status-main-color) !important;font-size:calc(1em + 2px);}
 	.migasuccess{color:green !important;font-size:calc(1em + 2px);}
 	.migaerror{color:red !important;font-size:calc(1em + 2px);}
+	.miganotwritable{color:#c77700;cursor:help;}
 	.migascanstatus:after{font-size:180%;content:' .';animation:migadots 1.8s steps(5,end)infinite}
 	@keyframes migadots{0%,20%{color:var(--miga-status-text-shadow-color);text-shadow:.25em 0 0 var(--miga-status-text-shadow-color),.5em 0 0 var(--miga-status-text-shadow-color)}40%{color:var(--miga-status-main-color);text-shadow:.25em 0 0 var(--miga-status-text-shadow-color),.5em 0 0 var(--miga-status-text-shadow-color)}60%{text-shadow:.25em 0 0 var(--miga-status-main-color),.5em 0 0 var(--miga-status-text-shadow-color)}80%,100%{text-shadow:.25em 0 0 var(--miga-status-main-color),.5em 0 0 var(--miga-status-main-color)}}
 </style>
@@ -44,7 +45,7 @@
 		[% IF item.category == cat %]
 		<tr>
 			<td><input type="checkbox" data-category="[% item.category %]" name="pref_selected_[% item.namespace %]" id="selected_[% item.idx %]"[% IF item.checked %] checked[% END %] onclick="migaUpdateSelectAllButton()"></td>
-			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label></td>
+			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label>[% IF item.writable.defined && !item.writable %]<span class="miganotwritable" title="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE" | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %]</td>
 		</tr>
 		[% END %]
 		[% END %]
