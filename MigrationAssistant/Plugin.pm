@@ -28,6 +28,7 @@ use FileHandle;
 use Path::Class;
 use XML::Parser;
 use Digest::MD5 qw(md5_hex);
+use Plugins::MigrationAssistant::PluginInstaller;
 
 my $log = Slim::Utils::Log->addLogCategory({
 	'category' => 'plugin.migrationassistant',
@@ -642,6 +643,29 @@ sub _findPluginManifestEntry {
 	return $prefixMatch;
 }
 
+# Exact-match-only version of the above, safe to use for actual install/skip
+# decisions. The fuzzy prefix fallback above is fine for cosmetic display-name
+# lookups, but it produces real false positives when gating installs - e.g.
+# 'ClientCleanup' normalizes to a string that happens to start with 'cli',
+# so the fuzzy match above incorrectly reports it as already installed
+# whenever the built-in CLI plugin (Slim::Plugin::CLI) is present, which it
+# almost always is. Short plugin names are a landmine for this kind of
+# accidental prefix collision, so anything that decides whether to skip a
+# download/install must use this strict version instead.
+sub _findPluginManifestEntryExact {
+	my $shortName = shift;
+	my $normalizedTarget = lc($shortName);
+	$normalizedTarget =~ s/[^a-z0-9]//g;
+
+	my $plugins = Slim::Utils::PluginManager->allPlugins();
+	for my $pluginKey (keys %{$plugins}) {
+		my $normalizedKey = lc($pluginKey);
+		$normalizedKey =~ s/[^a-z0-9]//g;
+		return $plugins->{$pluginKey} if $normalizedKey eq $normalizedTarget;
+	}
+	return undef;
+}
+
 sub _pluginDisplayNameForNamespace {
 	my $namespace = shift;
 	return undef unless $namespace =~ /^plugin\.(.+)$/;
@@ -780,6 +804,8 @@ sub restoreFromBackup {
 
 	my $serverNamespaceRestored = 0;
 	my $anyNamespaceRestored = 0;
+	my $extensionsBackupData;
+	my (@queuedPluginInstalls, @failedPluginInstalls, @restoredPluginPrefsWithoutInstall);
 
 	for my $member ($zip->members) {
 		my $fileName = $member->fileName;
@@ -862,7 +888,36 @@ sub restoreFromBackup {
 		if (_mergePrefsFile($namespace, $backupData, $prefsDir, $pluginPrefsDir, $skipPrefs, $defaultSkipPrefs)) {
 			$anyNamespaceRestored = 1;
 			$serverNamespaceRestored = 1 if $namespace eq 'server';
+			$extensionsBackupData = $backupData if $namespace eq 'plugin.extensions';
 		}
+	}
+
+	# The only trusted signal for "should this plugin actually be installed" is
+	# extensions.prefs' own record of what was enabled at backup time - not
+	# merely the presence of a restored settings file for it, since a user may
+	# keep old plugin prefs around without wanting the plugin reinstalled. This
+	# only fires at all if the user chose to restore plugin.extensions.
+	my %enabledPluginsFromBackup;
+	if ($extensionsBackupData && ref $extensionsBackupData->{'plugin'} eq 'HASH') {
+		for my $pluginName (keys %{$extensionsBackupData->{'plugin'}}) {
+			next unless $extensionsBackupData->{'plugin'}{$pluginName};
+			$enabledPluginsFromBackup{lc($pluginName)} = $pluginName;
+		}
+	}
+
+	# Flag (don't act on) any individually-restored plugin prefs that won't get
+	# an install attempt - either extensions.prefs wasn't restored at all, or
+	# it was restored but didn't list this plugin as enabled.
+	for my $ns (keys %namespacesToRestore) {
+		next unless $ns =~ /^plugin\.(.+)$/;
+		my $shortName = $1;
+		next if $shortName eq 'state' || $shortName eq 'extensions';
+		next if _findPluginManifestEntryExact($shortName);
+		next if $enabledPluginsFromBackup{lc($shortName)};
+		push @restoredPluginPrefsWithoutInstall, $shortName;
+	}
+	if (@restoredPluginPrefsWithoutInstall) {
+		$log->warn('Restored settings for these plugins but did not queue them for install (extensions.prefs was not restored, or did not list them as enabled): ' . join(', ', @restoredPluginPrefsWithoutInstall));
 	}
 
 	for my $shortName (keys %restoredOurPluginFolders) {
@@ -871,42 +926,134 @@ sub restoreFromBackup {
 		$anyNamespaceRestored = 1 if _mergePrefsFile("plugin.$shortName", { $entry->{'pathkey'} => $restoredOurPluginFolders{$shortName} }, $prefsDir, $pluginPrefsDir, {}, {});
 	}
 
-	if ($serverNamespaceRestored) {
-		$prefs->set('restorependingrescan', 1);
-	}
-
 	my $restoreDateAdded = $selectedNamespaces && $selectedNamespaces->{'dateadded'} ? 1 : 0;
 	my $restorePlayCountLastPlayed = $selectedNamespaces && $selectedNamespaces->{'playcountlastplayed'} ? 1 : 0;
 
-	if ($restoreDateAdded || $restorePlayCountLastPlayed) {
-		my $xmlMember;
-		for my $member ($zip->members) {
-			my $fileName = $member->fileName;
-			next if _isJunkZipEntry($fileName);
-			my @parts = split(m{/}, $fileName);
-			if ($parts[-1] eq 'trackspersistent_selectivestats.xml') {
-				$xmlMember = $member;
-				last;
-			}
+	# Everything from here on used to run synchronously in-line, which was
+	# fine when it was just fast prefs merges. Plugin installs can take real
+	# time (network downloads), so - exactly like the existing tracks_persistent
+	# restore below - this needs to happen via Slim::Utils::Scheduler::add_task
+	# so this function can return quickly, the UI's existing progress-bar
+	# polling keeps working, and the final "please restart" banner still gets
+	# set once everything (including plugin installs) is actually done.
+	my $continueRestoreAfterPluginInstalls = sub {
+		$prefs->set('restorequeuedplugininstalls', \@queuedPluginInstalls);
+		$prefs->set('restorefailedplugininstalls', \@failedPluginInstalls);
+		$prefs->set('restoreskippedplugininstalls', \@restoredPluginPrefsWithoutInstall);
+
+		if ($serverNamespaceRestored) {
+			$prefs->set('restorependingrescan', 1);
 		}
-		if ($xmlMember) {
-			my $xmlTempFile = catfile($tempDir, 'trackspersistent_selectivestats.xml');
-			if ($xmlMember->extractToFileNamed($xmlTempFile) == AZ_OK) {
-				$prefs->set('restoreNeedsReload', 1);
-				_initTracksPersistentRestore($xmlTempFile, $restoreDateAdded, $restorePlayCountLastPlayed);
+
+		if ($restoreDateAdded || $restorePlayCountLastPlayed) {
+			my $xmlMember;
+			for my $member ($zip->members) {
+				my $fileName = $member->fileName;
+				next if _isJunkZipEntry($fileName);
+				my @parts = split(m{/}, $fileName);
+				if ($parts[-1] eq 'trackspersistent_selectivestats.xml') {
+					$xmlMember = $member;
+					last;
+				}
+			}
+			if ($xmlMember) {
+				my $xmlTempFile = catfile($tempDir, 'trackspersistent_selectivestats.xml');
+				if ($xmlMember->extractToFileNamed($xmlTempFile) == AZ_OK) {
+					$prefs->set('restoreNeedsReload', 1);
+					_initTracksPersistentRestore($xmlTempFile, $restoreDateAdded, $restorePlayCountLastPlayed);
+				} else {
+					$log->error("Could not extract trackspersistent_selectivestats.xml from backup archive");
+					_finishRestore(2);
+				}
 			} else {
-				$log->error("Could not extract trackspersistent_selectivestats.xml from backup archive");
+				$log->error("Selected trackspersistent restore, but trackspersistent_selectivestats.xml is missing from the backup archive");
 				_finishRestore(2);
 			}
 		} else {
-			$log->error("Selected trackspersistent restore, but trackspersistent_selectivestats.xml is missing from the backup archive");
-			_finishRestore(2);
+			_finishRestore($prefs->get('restorependingrescan') ? 3 : 1);
 		}
+
+		main::DEBUGLOG && $log->is_debug && $log->debug('restoreDateAdded='.$restoreDateAdded.' ## restorePlayCountLastPlayed='.$restorePlayCountLastPlayed.' ## status_backuprestore='.$prefs->get('status_backuprestore'));
+	};
+
+	my @pluginNamesToInstall = values %enabledPluginsFromBackup;
+	if (@pluginNamesToInstall) {
+		my $totalPluginsToInstall = scalar @pluginNamesToInstall;
+		my $pluginsProcessed = 0;
+		my @downloadedPluginNames;
+		$prefs->set('backuprestoreprogresspercentage', 0);
+		main::INFOLOG && $log->is_info && $log->info("Scheduling install for $totalPluginsToInstall plugin(s) found in restored extensions.prefs");
+
+		my $pluginInstallTask;
+		$pluginInstallTask = sub {
+			my $ok = eval {
+				if (@pluginNamesToInstall) {
+					my $name = shift @pluginNamesToInstall;
+					# Deliberately download-only here - do NOT reload the plugin
+					# manager per plugin. An earlier version called what's now
+					# PluginInstaller::finalizeInstalls() once per plugin here,
+					# and that caused every already-loaded plugin to reprocess
+					# its own startup state on every single call - with several
+					# plugins queued, one already-installed (and unrelated)
+					# plugin ended up repeatedly re-running its own startup
+					# safe-mode check dozens of times in a row, which was
+					# indistinguishable from a hang. finalizeInstalls() must
+					# only run once, after this whole queue is empty.
+					my ($installedOk, $reason) = eval { Plugins::MigrationAssistant::PluginInstaller::downloadPlugin($name) };
+					if ($@) {
+						$log->error("Unexpected error while downloading plugin '$name': $@");
+						push @failedPluginInstalls, "$name (unexpected error - see server.log)";
+					} elsif ($installedOk) {
+						push @downloadedPluginNames, $name;
+					} else {
+						$log->warn("Could not download plugin '$name': $reason");
+						push @failedPluginInstalls, "$name ($reason)";
+					}
+
+					$pluginsProcessed++;
+					$prefs->set('backuprestoreprogresspercentage', sprintf("%.0f", ($pluginsProcessed / $totalPluginsToInstall) * 100));
+				}
+				1;
+			};
+
+			if (!$ok) {
+				# Something unexpected died outside the inner eval above (e.g.
+				# while updating bookkeeping state) - don't silently strand the
+				# remaining queue or leave the restore stuck "in progress"
+				# forever. Log it clearly and stop trying further plugins.
+				$log->error("Unexpected error in plugin install task, aborting remaining plugin installs: $@");
+				push @failedPluginInstalls, "(install aborted early due to an unexpected error - see server.log)";
+				@pluginNamesToInstall = ();
+			}
+
+			return 1 if @pluginNamesToInstall;
+
+			eval {
+				my ($queuedRef, $failedRef) = Plugins::MigrationAssistant::PluginInstaller::finalizeInstalls(\@downloadedPluginNames);
+				push @queuedPluginInstalls, @{$queuedRef};
+				push @failedPluginInstalls, @{$failedRef};
+				$log->warn('Downloaded but did not load: ' . join(', ', @{$failedRef})) if @{$failedRef};
+			};
+			if ($@) {
+				$log->error("Unexpected error finalizing plugin installs: $@");
+				push @failedPluginInstalls, "(finalizing installs failed unexpectedly - see server.log)";
+			}
+
+			eval { $continueRestoreAfterPluginInstalls->() };
+			if ($@) {
+				# Guarantee the restore doesn't stay stuck in "in progress"
+				# forever (and the restart banner never appearing) even if the
+				# continuation itself hit something unexpected.
+				$log->error("Unexpected error finishing restore after plugin installs: $@ - forcing restore to complete anyway");
+				_finishRestore($prefs->get('restorependingrescan') ? 3 : 1);
+			}
+			return 0;
+		};
+		Slim::Utils::Scheduler::add_task($pluginInstallTask);
 	} else {
-		_finishRestore($prefs->get('restorependingrescan') ? 3 : 1);
+		$continueRestoreAfterPluginInstalls->();
 	}
 
-	main::DEBUGLOG && $log->is_debug && $log->debug('restoreDateAdded='.$restoreDateAdded.' ## restorePlayCountLastPlayed='.$restorePlayCountLastPlayed.' ## status_backuprestore='.$prefs->get('status_backuprestore'));
 	return (1, $prefs->get('restorependingrescan'), $anyNamespaceRestored);
 }
 
@@ -1092,7 +1239,7 @@ sub _initTracksPersistentRestore {
 	$tpRestoreStarted = time();
 
 	main::INFOLOG && $log->is_info && $log->info('Starting tracks_persistent restore from backup file');
-	Slim::Utils::Scheduler::add_task(\&_tpRestoreScanFunction);
+	Slim::Utils::Scheduler::add_task(\&_tpRestoreScanFunctionSafe);
 }
 
 sub _getTracksPersistentBackupTrackCount {
@@ -1122,6 +1269,21 @@ sub _getTracksPersistentBackupTrackCount {
 	}
 
 	return $count || 0;
+}
+
+sub _tpRestoreScanFunctionSafe {
+	my $result = eval { _tpRestoreScanFunction() };
+	if ($@) {
+		$log->error("Unexpected error in tracks_persistent restore task, aborting: $@");
+		$tpRestoreErrors++;
+		eval { _tpDoneScanning() };
+		if ($@) {
+			$log->error("Unexpected error during tracks_persistent cleanup after abort: $@ - forcing restore to complete anyway");
+			eval { _finishRestore(2) };
+		}
+		return 0;
+	}
+	return $result;
 }
 
 sub _tpRestoreScanFunction {
@@ -1190,31 +1352,55 @@ sub _tpRestoreScanFunction {
 
 sub _finishRestore {
 	my $result = shift; # 1 = success, 2 = error, 3 = success, requires rescan (mapped to global result codes below)
-	my $resultCode = { 1 => 3, 2 => 4, 3 => 5 }->{$result};
-	$prefs->set('backuprestoreresult', $resultCode);
-	$prefs->set('backuprestoreprogresspercentage', 100);
-	$prefs->set('status_backuprestore', 0);
+	my $resultCode = { 1 => 3, 2 => 4, 3 => 5 }->{$result} || 4;
+
+	main::INFOLOG && $log->is_info && $log->info("_finishRestore called with result=$result (resultCode=$resultCode)");
+
+	eval {
+		$prefs->set('backuprestoreresult', $resultCode);
+		$prefs->set('backuprestoreprogresspercentage', 100);
+		$prefs->set('status_backuprestore', 0);
+	};
+	if ($@) {
+		$log->error("Error while finishing restore (prefs could not be updated): $@");
+	}
+
+	main::INFOLOG && $log->is_info && $log->info('_finishRestore complete - status_backuprestore is now '.(eval { $prefs->get('status_backuprestore') } // 'unknown'));
 }
 
 sub _tpDoneScanning {
-	if (defined $tpBackupParserNB) {
-		eval { $tpBackupParserNB->parse_done };
+	eval {
+		if (defined $tpBackupParserNB) {
+			eval { $tpBackupParserNB->parse_done };
+		}
+
+		$tpBackupParserNB = undef;
+		$tpBackupParser = undef;
+		$tpOpened = 0;
+		close($tpRestoreFH) if $tpRestoreFH;
+		$tpRestoreFH = undef;
+
+		main::INFOLOG && $log->is_info && $log->info('tracks_persistent restore completed after '.(time() - $tpRestoreStarted).' seconds. Restored '.$tpRestoreCount.($tpRestoreCount == 1 ? ' track.' : ' tracks.'));
+		my $tpFailedCount = $tpUnidentifiableCount + $tpUnmatchedCount;
+		if ($tpFailedCount && !$tpRestoreCount) {
+			$log->error("Track statistics restore matched 0 of $tpProcessedTrackCount track(s) in the backup to a track in the current library - nothing was restored.");
+		} elsif ($tpFailedCount) {
+			$log->warn("Track statistics restore could not match $tpFailedCount of $tpProcessedTrackCount track(s) in the backup to a track in the current library - their values were skipped.");
+		}
+	};
+	if ($@) {
+		$log->error("Unexpected error during tracks_persistent restore cleanup: $@");
 	}
 
-	$tpBackupParserNB = undef;
-	$tpBackupParser = undef;
-	$tpOpened = 0;
-	close($tpRestoreFH) if $tpRestoreFH;
-	$tpRestoreFH = undef;
-
-	main::INFOLOG && $log->is_info && $log->info('tracks_persistent restore completed after '.(time() - $tpRestoreStarted).' seconds. Restored '.$tpRestoreCount.($tpRestoreCount == 1 ? ' track.' : ' tracks.'));
-	my $tpFailedCount = $tpUnidentifiableCount + $tpUnmatchedCount;
-	if ($tpFailedCount && !$tpRestoreCount) {
-		$log->error("Track statistics restore matched 0 of $tpProcessedTrackCount track(s) in the backup to a track in the current library - nothing was restored.");
-	} elsif ($tpFailedCount) {
-		$log->warn("Track statistics restore could not match $tpFailedCount of $tpProcessedTrackCount track(s) in the backup to a track in the current library - their values were skipped.");
+	# Guarantee _finishRestore always runs, regardless of what happened above,
+	# so the restore can never get stuck "in progress" forever from the UI's
+	# point of view.
+	eval {
+		_finishRestore($tpRestoreErrors > 0 ? 2 : ($prefs->get('restorependingrescan') ? 3 : 1));
+	};
+	if ($@) {
+		$log->error("Unexpected error calling _finishRestore from _tpDoneScanning: $@");
 	}
-	_finishRestore($tpRestoreErrors > 0 ? 2 : ($prefs->get('restorependingrescan') ? 3 : 1));
 }
 
 sub _tpHandleStartElement {
