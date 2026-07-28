@@ -123,7 +123,28 @@ sub beforeRender {
 	}
 	if ($prefs->get('backuprestoreresult') == 3 || $prefs->get('backuprestoreresult') == 5) {
 		$paramRef->{'path'} = 'plugins/MigrationAssistant/settings/restore.html';
-		$paramRef = Slim::Web::Settings::Server::Plugins->getRestartMessage($paramRef, Slim::Utils::Strings::string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_RESTART_BANNER'));
+
+		my $restartMessage = Slim::Utils::Strings::string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_RESTART_BANNER');
+
+		# Surface plugin install queueing results from PluginInstaller.pm.
+		# Hardcoded English for now rather than adding tokens to strings.txt -
+		# happy to move these to proper string tokens if you'd rather keep
+		# everything localized the way the rest of the plugin is.
+		my $queuedPluginInstalls = $prefs->get('restorequeuedplugininstalls') || [];
+		my $failedPluginInstalls = $prefs->get('restorefailedplugininstalls') || [];
+		my $skippedPluginPrefs = $prefs->get('restoreskippedplugininstalls') || [];
+
+		if (@{$queuedPluginInstalls}) {
+			$restartMessage .= ' ' . scalar(@{$queuedPluginInstalls}) . ' plugin(s) queued for install: ' . join(', ', @{$queuedPluginInstalls}) . '.';
+		}
+		if (@{$failedPluginInstalls}) {
+			$restartMessage .= ' Could not queue ' . scalar(@{$failedPluginInstalls}) . ' plugin(s): ' . join(', ', @{$failedPluginInstalls}) . '.';
+		}
+		if (@{$skippedPluginPrefs}) {
+			$restartMessage .= ' Restored settings for ' . scalar(@{$skippedPluginPrefs}) . ' plugin(s) not marked as installed in extensions.prefs, so they were not queued for install: ' . join(', ', @{$skippedPluginPrefs}) . '.';
+		}
+
+		$paramRef = Slim::Web::Settings::Server::Plugins->getRestartMessage($paramRef, $restartMessage);
 	}
 }
 

@@ -8,7 +8,6 @@
 	.migastatus{color:var(--miga-status-main-color) !important;font-size:calc(1em + 2px);}
 	.migasuccess{color:green !important;font-size:calc(1em + 2px);}
 	.migaerror{color:red !important;font-size:calc(1em + 2px);}
-	.miganotwritable{color:#c77700;cursor:help;}
 	.migascanstatus:after{font-size:180%;content:' .';animation:migadots 1.8s steps(5,end)infinite}
 	@keyframes migadots{0%,20%{color:var(--miga-status-text-shadow-color);text-shadow:.25em 0 0 var(--miga-status-text-shadow-color),.5em 0 0 var(--miga-status-text-shadow-color)}40%{color:var(--miga-status-main-color);text-shadow:.25em 0 0 var(--miga-status-text-shadow-color),.5em 0 0 var(--miga-status-text-shadow-color)}60%{text-shadow:.25em 0 0 var(--miga-status-main-color),.5em 0 0 var(--miga-status-text-shadow-color)}80%,100%{text-shadow:.25em 0 0 var(--miga-status-main-color),.5em 0 0 var(--miga-status-main-color)}}
 </style>
@@ -45,7 +44,7 @@
 		[% IF item.category == cat %]
 		<tr>
 			<td><input type="checkbox" data-category="[% item.category %]" name="pref_selected_[% item.namespace %]" id="selected_[% item.idx %]"[% IF item.checked %] checked[% END %] onclick="migaUpdateSelectAllButton()"></td>
-			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label>[% IF item.writable.defined && !item.writable %]<span class="miganotwritable" title="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE" | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %]</td>
+			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label></td>
 		</tr>
 		[% END %]
 		[% END %]
@@ -228,7 +227,14 @@
 				if (value == 0) {
 					migaSetButtonsDisabled(false);
 					document.getElementById('migabackuprestoreprogresswrapper').style.display = 'none';
-					clearInterval(migaStatusInterval);
+					// Intentionally NOT clearing migaStatusInterval here. If this
+					// one-shot backuprestoreresult fetch below fails for any
+					// transient reason, the interval simply tries the whole
+					// status_backuprestore -> backuprestoreresult chain again on
+					// the next 3-second tick, instead of leaving the page stuck
+					// showing a stale "in progress" message forever with nothing
+					// left polling to recover it. The interval is cleared once a
+					// final result (3/4/5) is actually received and displayed.
 					migaGetPrefVal('backuprestoreresult');
 				} else {
 					migaSetButtonsDisabled(true);
@@ -242,19 +248,30 @@
 				document.getElementById('migabackuprestoreprogressbar').style.width = value + '%';
 			} else if (prefName == 'backuprestoreresult') {
 				if (value == 3) {
-					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS" | string %]', 'migasuccess');
-					[% IF restoreReload %]
-					setTimeout(function() { window.location.href = window.location.pathname; }, 500);
-					[% END %]
+					clearInterval(migaStatusInterval);
+					// Always reload on success - the restart banner itself is
+					// server-rendered and only appears via a fresh page load
+					// (beforeRender), not via this JS status update. Gating
+					// this on the restoreReload flag captured at initial page
+					// load is unreliable once plugin installs make the whole
+					// restore take much longer than a moment: that flag can
+					// still be false in the already-loaded page even once the
+					// restore has actually finished successfully.
+					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS" | string %] [% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_RELOADING" | string %]', 'migasuccess');
+					setTimeout(function() { window.location.href = window.location.pathname; }, 6000);
 				} else if (value == 4) {
+					clearInterval(migaStatusInterval);
 					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ERROR" | string %]', 'migaerror');
 					setTimeout(migaGetPrefVal, 3000, 'backuprestoreresult', '0');
 				} else if (value == 5) {
-					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS_RESCAN_NEEDED" | string %]', 'migasuccess');
-					[% IF restoreReload %]
-					setTimeout(function() { window.location.href = window.location.pathname; }, 500);
-					[% END %]
+					clearInterval(migaStatusInterval);
+					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS_RESCAN_NEEDED" | string %] [% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_RELOADING" | string %]', 'migasuccess');
+					setTimeout(function() { window.location.href = window.location.pathname; }, 6000);
 				}
+				// if value is something unexpected (not 3/4/5) we deliberately
+				// do nothing here and do not clear the interval - the next
+				// 3-second tick will just ask status_backuprestore again and
+				// retry the whole chain.
 			}
 		}).catch(function(error) {
 			console.log(error);
