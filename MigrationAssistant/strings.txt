@@ -193,3 +193,6 @@ PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ERROR
 
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_RESTART_BANNER
 	EN	Migration Assistant has restored preferences. Please restart Lyrion Music Server for the changes to take effect.
+
+PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_RELOADING
+	EN	Reloading to show the restart option...
