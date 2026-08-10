@@ -45,6 +45,9 @@ A backup archive includes:
 2. Preview its contents and choose exactly which items to restore - nothing is restored automatically or all-or-nothing.<br><br>
 3. **Immediately after the restore is complete, the server must be restarted. This is mandatory.**<br>If anything you restored requires a *rescan*, you will be notified after the restore completes and must trigger the rescan manually **after restarting the server**.
 
+
+Restoring track statistics from a backup created on a different operating system (macOS/Linux/Windows) is supported; a small number of tracks whose file names use characters not allowed on the current operating system may remain unmatched — see the server log for details, or [Restoring backups across operating systems](https://github.com/AF-1/sobras/wiki/Restoring-backups-across-operating-systems) for more info.
+
 <br><br><br>
 
 ## Installation
