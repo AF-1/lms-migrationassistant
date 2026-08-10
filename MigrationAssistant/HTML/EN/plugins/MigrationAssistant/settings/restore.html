@@ -8,17 +8,18 @@
 	.migastatus{color:var(--miga-status-main-color) !important;font-size:calc(1em + 2px);}
 	.migasuccess{color:green !important;font-size:calc(1em + 2px);}
 	.migaerror{color:red !important;font-size:calc(1em + 2px);}
+	.migawarning{color:#b8860b !important;font-size:calc(1em + 2px);}
 	.miganotwritable{color:#c77700;cursor:help;}
 	.migascanstatus:after{font-size:180%;content:' .';animation:migadots 1.8s steps(5,end)infinite}
 	@keyframes migadots{0%,20%{color:var(--miga-status-text-shadow-color);text-shadow:.25em 0 0 var(--miga-status-text-shadow-color),.5em 0 0 var(--miga-status-text-shadow-color)}40%{color:var(--miga-status-main-color);text-shadow:.25em 0 0 var(--miga-status-text-shadow-color),.5em 0 0 var(--miga-status-text-shadow-color)}60%{text-shadow:.25em 0 0 var(--miga-status-main-color),.5em 0 0 var(--miga-status-text-shadow-color)}80%,100%{text-shadow:.25em 0 0 var(--miga-status-main-color),.5em 0 0 var(--miga-status-main-color)}}
 </style>
-[% page = "PLUGIN_MIGRATIONSASSISTANT" %]
+[% page = "PLUGIN_MIGRATIONASSISTANT" %]
 [% PROCESS settings/header.html %]
 
 [% PROCESS plugins/MigrationAssistant/settings/subpage_chooser.html %]
 
 <div class="setting[% IF systemSkin == "material" %]Group[% ELSE %]Section[% END %]">
-	[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_INTRO" | string %]
+	[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_INTRO" | string %]
 </div>
 <br>
 
@@ -28,16 +29,16 @@
 <div id="migabackuprestoreprogresswrapper"><div id="migabackuprestoreprogressbar"></div></div>
 <br>
 
-[% WRAPPER setting title="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECTFILE" desc="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECTFILE_DESC" %]
+[% WRAPPER setting title="PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECTFILE" desc="PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECTFILE_DESC" %]
 	<input type="text" class="stdedit selectFile_zip" name="pref_restorefile" id="restorefile" value="[% restorefilefolder %]" size="40"><br><br>
-	<input name="listrestorecontents" type="submit" class="stdclick" id="migalistrestorebutton" value="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_LIST_BUTTON" | string %]"[% IF activebackuprestore %] disabled[% END %]>
-	[% IF restorearchivecontents.size %]<input type="button" class="stdclick" id="migaselectallbutton" style="margin-left:10px;" value="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]" onclick="migaToggleSelectAll()">[% END %]
+	<input name="listrestorecontents" type="submit" class="stdclick" id="migalistrestorebutton" value="[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_LIST_BUTTON" | string %]"[% IF activebackuprestore %] disabled[% END %]>
+	[% IF restorearchivecontents.size %]<input type="button" class="stdclick" id="migaselectallbutton" style="margin-left:10px;" value="[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]" onclick="migaToggleSelectAll()">[% END %]
 
 	[% IF restoremissingfile || restoreerror %]
-	<span style="padding-left:5px;color:red;">[% IF restoremissingfile == 1 %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_MISSINGFILE" | string %][% ELSIF restoremissingfile == 2 %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOZIPFILE" | string %][% ELSIF restoremissingfile == 3 %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_FILENOTFOUND" | string %][% ELSE %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ERROR" | string %][% END %]</span>
+	<span style="padding-left:5px;color:red;">[% IF restoremissingfile == 1 %][% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_MISSINGFILE" | string %][% ELSIF restoremissingfile == 2 %][% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_NOZIPFILE" | string %][% ELSIF restoremissingfile == 3 %][% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_FILENOTFOUND" | string %][% ELSE %][% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ERROR" | string %][% END %]</span>
 	[% END %]
 [% IF restorenoitems %]
-	<span style="padding-left:5px;color:red;">[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOITEMS" | string %]</span>
+	<span style="padding-left:5px;color:red;">[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_NOITEMS" | string %]</span>
 	[% END %]
 	[% BLOCK restorecategorytable %]
 	<table class="migarestoretable">
@@ -45,7 +46,7 @@
 		[% IF item.category == cat %]
 		<tr>
 			<td><input type="checkbox" data-category="[% item.category %]" name="pref_selected_[% item.namespace %]" id="selected_[% item.idx %]"[% IF item.checked %] checked[% END %] onclick="migaUpdateSelectAllButton()"></td>
-			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label>[% IF item.writable.defined && !item.writable %]<span class="miganotwritable" title="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE" | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %]</td>
+			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label>[% IF item.writable.defined && !item.writable %]<span class="miganotwritable" title="[% (item.pathExists.defined && !item.pathExists ? "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_PATHMISSING" : "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE") | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %]</td>
 		</tr>
 		[% END %]
 		[% END %]
@@ -57,7 +58,7 @@
 		<summary>
 			[% title | string %]
 			[% IF togglebutton %]
-			<input type="button" class="stdclick migacategorybutton" style="margin-left:10px;" data-category="[% cat %]" value="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]" onclick="event.preventDefault();event.stopPropagation();migaToggleCategory(this);">
+			<input type="button" class="stdclick migacategorybutton" style="margin-left:10px;" data-category="[% cat %]" value="[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]" onclick="event.preventDefault();event.stopPropagation();migaToggleCategory(this);">
 			[% END %]
 		</summary>
 		[% INCLUDE restorecategorytable cat=cat %]
@@ -66,45 +67,45 @@
 
 	[% IF restorearchivecontents.size %]
 	<br><br>
-	<div class="wrapper">[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECTITEMS_DESC" | string %]</div><br>
+	<div class="wrapper">[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECTITEMS_DESC" | string %]</div><br>
 	<div id="migarestoretable">
 		[% IF restorecategorycounts.trackstats %]
-			[% INCLUDE restorecategory cat='trackstats' title='PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_TRACKSTATS' open=1 %]
+			[% INCLUDE restorecategory cat='trackstats' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_TRACKSTATS' open=1 %]
 		[% END %]
 		[% IF restorecategorycounts.playlistfolder %]
-			[% INCLUDE restorecategory cat='playlistfolder' title='PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLAYLISTFOLDER' open=1 %]
+			[% INCLUDE restorecategory cat='playlistfolder' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLAYLISTFOLDER' open=1 %]
 		[% END %]
 		[% IF restorecategorycounts.server %]
-			[% INCLUDE restorecategory cat='server' title='PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_SERVER' open=1 togglebutton=1 %]
+			[% INCLUDE restorecategory cat='server' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_SERVER' open=1 togglebutton=1 %]
 		[% END %]
 		[% IF restorecategorycounts.plugin_core %]
-			[% INCLUDE restorecategory cat='plugin_core' title='PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_CORE' open=1 togglebutton=1 %]
+			[% INCLUDE restorecategory cat='plugin_core' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_CORE' open=1 togglebutton=1 %]
 		[% END %]
 		[% IF restorecategorycounts.plugin_thirdparty %]
-			[% INCLUDE restorecategory cat='plugin_thirdparty' title='PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_THIRDPARTY' open=1 togglebutton=1 %]
+			[% INCLUDE restorecategory cat='plugin_thirdparty' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_THIRDPARTY' open=1 togglebutton=1 %]
 		[% END %]
 		[% IF restorecategorycounts.custompaths %]
-			[% INCLUDE restorecategory cat='custompaths' title='PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_CUSTOMPATHS' open=1 %]
+			[% INCLUDE restorecategory cat='custompaths' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_CUSTOMPATHS' open=1 %]
 		[% END %]
 		[% IF restorecategorycounts.ourplugindata %]
-			[% INCLUDE restorecategory cat='ourplugindata' title='PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_OURPLUGINDATA' open=1 togglebutton=1 %]
+			[% INCLUDE restorecategory cat='ourplugindata' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_OURPLUGINDATA' open=1 togglebutton=1 %]
 		[% END %]
 		[% IF restorecategorycounts.plugin_notinstalled %]
-			[% INCLUDE restorecategory cat='plugin_notinstalled' title='PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_NOTINSTALLED' togglebutton=1 %]
+			[% INCLUDE restorecategory cat='plugin_notinstalled' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_NOTINSTALLED' togglebutton=1 %]
 		[% END %]
 	</div>
 	<br>
-	<input name="restore" type="submit" class="stdclick" id="migarestorebutton" value="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_BUTTON" | string %]"[% IF activebackuprestore %] disabled[% END %]>
+	<input name="restore" type="submit" class="stdclick" id="migarestorebutton" value="[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_BUTTON" | string %]"[% IF activebackuprestore %] disabled[% END %]>
 	[% END %]
 [% END %]
 <br><br>
 
-[% WRAPPER setting title="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SKIPPREFS" desc="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SKIPPREFS_DESC" %]
+[% WRAPPER setting title="PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SKIPPREFS" desc="PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SKIPPREFS_DESC" %]
 <input type="text" class="stdedit" name="pref_restoreskipprefs" id="restoreskipprefs" value="[% restoreskipprefs %]" size="60">
 [% END %]
 <br><br>
 
-[% WRAPPER setting title="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CREATEBAKS" desc="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CREATEBAKS_DESC" %]
+[% WRAPPER setting title="PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CREATEBAKS" desc="PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CREATEBAKS_DESC" %]
 <select class="stdedit" name="pref_restorecreatebaks" id="restorecreatebaks">
 	<option [% IF NOT prefs.restorecreatebaks %]selected [% END %]value="0">[% 'NO' | getstring %]</option>
 	<option [% IF prefs.restorecreatebaks %]selected [% END %]value="1">[% 'YES' | getstring %]</option>
@@ -128,7 +129,7 @@
 	function migaShowStatus(text, cssClasses) {
 		var el = document.getElementById('migabackuprestorestatus');
 		el.innerHTML = text;
-		el.classList.remove('migastatus', 'migascanstatus', 'migasuccess', 'migaerror');
+		el.classList.remove('migastatus', 'migascanstatus', 'migasuccess', 'migaerror', 'migawarning');
 		if (cssClasses) {
 			cssClasses.split(' ').forEach(function(c) { el.classList.add(c); });
 		}
@@ -178,7 +179,7 @@
 				allChecked = false;
 			}
 		}
-		document.getElementById('migaselectallbutton').value = allChecked ? '[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]' : '[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECT_ALL" | string %]';
+		document.getElementById('migaselectallbutton').value = allChecked ? '[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]' : '[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECT_ALL" | string %]';
 		var restoreButton = document.getElementById('migarestorebutton');
 		if (restoreButton) {
 			restoreButton.disabled = !anyChecked;
@@ -196,7 +197,7 @@
 				}
 			}
 
-			button.value = allChecked ? '[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]' : '[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECT_ALL" | string %]';
+			button.value = allChecked ? '[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]' : '[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECT_ALL" | string %]';
 		});
 	}
 
@@ -233,7 +234,7 @@
 				} else {
 					migaSetButtonsDisabled(true);
 					if (value == 2) {
-						migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_INPROGRESS" | string %]', 'migastatus migascanstatus');
+						migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_INPROGRESS" | string %]', 'migastatus migascanstatus');
 						document.getElementById('migabackuprestoreprogresswrapper').style.display = 'block';
 						migaGetPrefVal('backuprestoreprogresspercentage');
 					}
@@ -242,15 +243,25 @@
 				document.getElementById('migabackuprestoreprogressbar').style.width = value + '%';
 			} else if (prefName == 'backuprestoreresult') {
 				if (value == 3) {
-					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS" | string %]', 'migasuccess');
+					migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SUCCESS" | string %]', 'migasuccess');
 					[% IF restoreReload %]
 					setTimeout(function() { window.location.href = window.location.pathname; }, 500);
 					[% END %]
 				} else if (value == 4) {
-					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ERROR" | string %]', 'migaerror');
+					migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ERROR" | string %]', 'migaerror');
 					setTimeout(migaGetPrefVal, 3000, 'backuprestoreresult', '0');
 				} else if (value == 5) {
-					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS_RESCAN_NEEDED" | string %]', 'migasuccess');
+					migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SUCCESS_RESCAN_NEEDED" | string %]', 'migasuccess');
+					[% IF restoreReload %]
+					setTimeout(function() { window.location.href = window.location.pathname; }, 500);
+					[% END %]
+				} else if (value == 6) {
+					migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SUCCESS_TRACKS_SKIPPED" | string %]', 'migawarning');
+					[% IF restoreReload %]
+					setTimeout(function() { window.location.href = window.location.pathname; }, 500);
+					[% END %]
+				} else if (value == 7) {
+					migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SUCCESS_RESCAN_NEEDED_TRACKS_SKIPPED" | string %]', 'migawarning');
 					[% IF restoreReload %]
 					setTimeout(function() { window.location.href = window.location.pathname; }, 500);
 					[% END %]

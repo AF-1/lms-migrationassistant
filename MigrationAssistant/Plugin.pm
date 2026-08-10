@@ -27,19 +27,27 @@ use File::Temp qw(tempdir);
 use FileHandle;
 use Path::Class;
 use XML::Parser;
+use Unicode::Normalize;
 use Digest::MD5 qw(md5_hex);
 
 my $log = Slim::Utils::Log->addLogCategory({
 	'category' => 'plugin.migrationassistant',
 	'defaultLevel' => 'ERROR',
-	'description' => 'PLUGIN_MIGRATIONSASSISTANT',
+	'description' => 'PLUGIN_MIGRATIONASSISTANT',
 });
 my $serverPrefs = preferences('server');
 my $prefs = preferences('plugin.migrationassistant');
 
-my ($tpBackupParser, $tpBackupParserNB, $tpRestoreFH, $tpOpened, $tpInTrack, $tpInValue, $tpCurrentKey, $tpRestoreCount, $tpRestoreStarted, $tpRestoreFile, $tpRestoreDateAdded, $tpRestorePlayCountLastPlayed, $tpTotalTrackCount, $tpProcessedTrackCount, $tpRestoreErrors, $tpUnidentifiableCount, $tpUnmatchedCount, $tpRestoreDone, $bkpZip, $bkpFile, $bkpTempDir, $bkpOutput, $bkpTotalTrackCount, $bkpProcessedTrackCount, $bkpStarted, $bkpErrors);
-my @bkpPersistentTracks;
+my ($tpBackupParser, $tpBackupParserNB, $tpRestoreFH, $tpOpened, $tpInTrack, $tpInValue, $tpCurrentKey);
 my %tpRestoreItem;
+
+my ($tpRestoreFile, $tpRestoreDateAdded, $tpRestorePlayCountLastPlayed);
+my ($tpRestoreCount, $tpRestoreStarted, $tpTotalTrackCount, $tpProcessedTrackCount, $tpRestoreErrors, $tpUnidentifiableCount, $tpUnmatchedCount, $tpRestoreDone, $tpBackupSourceOS, $tpBackupSourceCodepage, $tpPreferCodepageFirst);
+my @tpUnmatchedTrackURLs;
+
+my ($bkpZip, $bkpFile, $bkpTempDir, $bkpOutput, $bkpTotalTrackCount, $bkpProcessedTrackCount, $bkpStarted, $bkpErrors);
+my @bkpPersistentTracks;
+
 our @OUR_PLUGIN_DATA_FOLDERS;
 my @DEFAULT_RESTORE_SKIP_PREFS;
 
@@ -68,7 +76,7 @@ sub initPrefs {
 	});
 	$prefs->set('status_backuprestore', '0'); # 0 = idle, 1 = backup in progress, 2 = restore in progress
 	$prefs->set('backuprestoreprogresspercentage', '0');
-	$prefs->set('backuprestoreresult', '0'); # 0 = no result, 1 = backup success, 2 = backup error, 3 = restore success, 4 = restore error, 5 = restore success, requires rescan
+	$prefs->set('backuprestoreresult', '0'); # 0 = no result, 1 = backup success, 2 = backup error, 3 = restore success, 4 = restore error, 5 = restore success, requires rescan, 6 = restore success some tracks skipped, 7 = restore success requires rescan and some tracks skipped
 	$prefs->set('restoreNeedsReload', 0);
 
 	@OUR_PLUGIN_DATA_FOLDERS = (
@@ -88,6 +96,7 @@ sub initPrefs {
 		'server:librarycachedir',
 		'server:securitySecret',
 		'server:bindAddress',
+		'plugin.extensions:plugin',
 		'plugin.alternativeplaycount:apcfolderpath',
 		'plugin.alternativeplaycount:apcparentfolderpath',
 		'plugin.customskip3:customskipfolderpath',
@@ -105,6 +114,7 @@ sub initPrefs {
 
 
 ## Backup
+
 sub createBackup {
 	if ($prefs->get('status_backuprestore')) {
 		$log->warn('A backup or restore is already in progress, please wait for it to finish');
@@ -388,9 +398,15 @@ sub _initTracksPersistentBackup {
 		return;
 	};
 
+	my $osDetails = Slim::Utils::OSDetect::details();
+	my $backupCodepage = getBackupCodepage();
 	print $bkpOutput "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n";
 	print $bkpOutput "<!-- MigrationAssistant backup of selected tracks_persistent values for ".$bkpTotalTrackCount.($bkpTotalTrackCount == 1 ? " track" : " tracks")." -->\n";
+	print $bkpOutput "<!-- Created on OS: ".($osDetails->{'osName'} || $^O)."; OS family: ".($osDetails->{'os'} || 'unknown')." -->\n";
+	print $bkpOutput "<!-- OS-Arch: ".($osDetails->{'osArch'} || 'unknown')."; Perl-Arch: ".($osDetails->{'binArch'} || 'unknown')."; FS: ".($osDetails->{'fsType'} || 'unknown')."; Perl $] -->\n";
 	print $bkpOutput "<TracksPersistentSelectiveStats>\n";
+	print $bkpOutput "\t<backupos>".($osDetails->{'os'} || $^O)."</backupos>\n";
+	print $bkpOutput "\t<backupcodepage>".($backupCodepage || '')."</backupcodepage>\n";
 	print $bkpOutput "\t<trackcount>".$bkpTotalTrackCount."</trackcount>\n";
 
 	main::INFOLOG && $log->is_info && $log->info('Starting tracks_persistent backup export for '.$bkpTotalTrackCount.' tracks');
@@ -465,7 +481,8 @@ sub _finishBackup {
 }
 
 
-# Restore
+## Restore
+
 sub listBackupContents {
 	my $zipFile = shift;
 	return [] unless $zipFile && -f $zipFile;
@@ -520,8 +537,8 @@ sub listBackupContents {
 		my $baseName = $parts[-1];
 
 		if ($baseName eq 'trackspersistent_selectivestats.xml') {
-			push @contents, { namespace => 'dateadded', category => 'trackstats', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_DATEADDED_LABEL'), checked => 1, filename => $fileName };
-			push @contents, { namespace => 'playcountlastplayed', category => 'trackstats', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYCOUNTLASTPLAYED_LABEL'), checked => 1, filename => $fileName };
+			push @contents, { namespace => 'dateadded', category => 'trackstats', label => string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DATEADDED_LABEL'), checked => 1, filename => $fileName };
+			push @contents, { namespace => 'playcountlastplayed', category => 'trackstats', label => string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_PLAYCOUNTLASTPLAYED_LABEL'), checked => 1, filename => $fileName };
 			next;
 		}
 
@@ -545,27 +562,28 @@ sub listBackupContents {
 		}
 	}
 
-	my $playlistDirWritable = _isTargetWritable($serverPrefs->get('playlistdir'));
+	my ($playlistDirWritable, $playlistDirExists) = _isTargetWritable($serverPrefs->get('playlistdir'));
 	if ($hasPlaylistBucket{'media'}) {
-		push @contents, { namespace => 'playlists_media', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_MEDIA_LABEL'), checked => 1, writable => $playlistDirWritable };
+		push @contents, { namespace => 'playlists_media', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_PLAYLISTS_MEDIA_LABEL'), checked => 1, writable => $playlistDirWritable, pathExists => $playlistDirExists };
 	}
 	if ($hasPlaylistBucket{'text'}) {
-		push @contents, { namespace => 'playlists_text', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_TEXT_LABEL'), checked => 1, writable => $playlistDirWritable };
+		push @contents, { namespace => 'playlists_text', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_PLAYLISTS_TEXT_LABEL'), checked => 1, writable => $playlistDirWritable, pathExists => $playlistDirExists };
 	}
 	if ($hasPlaylistBucket{'other'}) {
-		push @contents, { namespace => 'playlists_other', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_OTHER_LABEL'), checked => 1, writable => $playlistDirWritable };
+		push @contents, { namespace => 'playlists_other', category => 'playlistfolder', label => string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_PLAYLISTS_OTHER_LABEL'), checked => 1, writable => $playlistDirWritable, pathExists => $playlistDirExists };
 	}
 	if ($hasOpml) {
-		push @contents, { namespace => 'opmlfiles', category => 'server', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_OPMLFILES_LABEL'), checked => 1 };
+		push @contents, { namespace => 'opmlfiles', category => 'server', label => string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_OPMLFILES_LABEL'), checked => 1 };
 	}
 	if ($hasLogConf) {
-		push @contents, { namespace => 'logconf', category => 'server', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_LOGCONF_LABEL'), checked => 1 };
+		push @contents, { namespace => 'logconf', category => 'server', label => string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_LOGCONF_LABEL'), checked => 1 };
 	}
 	my %extraSystemDirTypeNames = (graphics => 'Graphics', html => 'HTML', ir => 'IR');
 	for my $dirType (qw(graphics html ir)) {
 		next unless $hasExtraSystem{$dirType};
 		my ($targetDir) = Slim::Utils::OSDetect::dirsFor($extraSystemDirTypeNames{$dirType});
-		push @contents, { namespace => "extrafiles_$dirType", category => 'server', label => string('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_EXTRAFILES_'.uc($dirType).'_LABEL'), checked => 1, writable => _isTargetWritable($targetDir) };
+		my ($extraDirWritable, $extraDirExists) = _isTargetWritable($targetDir);
+		push @contents, { namespace => "extrafiles_$dirType", category => 'server', label => string('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_EXTRAFILES_'.uc($dirType).'_LABEL'), checked => 1, writable => $extraDirWritable, pathExists => $extraDirExists };
 	}
 
 	my %customPathInfo;
@@ -579,7 +597,8 @@ sub listBackupContents {
 	for my $idx (sort { $a <=> $b } keys %customPathIndices) {
 		my $label = $customPathInfo{$idx} ? $customPathInfo{$idx}{'source'} : "custom path $idx";
 		my $target = $customPathInfo{$idx} ? ($customPathInfo{$idx}{'target'} || $customPathInfo{$idx}{'source'}) : undef;
-		push @contents, { namespace => "custompath_$idx", category => 'custompaths', label => $label, checked => 1, writable => _isTargetWritable($target) };
+		my ($customPathWritable, $customPathExists) = _isTargetWritable($target);
+		push @contents, { namespace => "custompath_$idx", category => 'custompaths', label => $label, checked => 1, writable => $customPathWritable, pathExists => $customPathExists };
 	}
 
 	for my $shortName (sort keys %ourPluginShortNames) {
@@ -624,22 +643,18 @@ sub _prefsNamespaceForZipEntry {
 	return (@parts >= 2 && $parts[-2] eq 'plugin') ? "plugin.$prefsName" : $prefsName;
 }
 
-sub _findPluginManifestEntry {
+sub _findPluginManifestEntryExact {
 	my $shortName = shift;
 	my $normalizedTarget = lc($shortName);
 	$normalizedTarget =~ s/[^a-z0-9]//g;
 
 	my $plugins = Slim::Utils::PluginManager->allPlugins();
-	my $prefixMatch;
 	for my $pluginKey (keys %{$plugins}) {
 		my $normalizedKey = lc($pluginKey);
 		$normalizedKey =~ s/[^a-z0-9]//g;
 		return $plugins->{$pluginKey} if $normalizedKey eq $normalizedTarget;
-		if (!$prefixMatch && (index($normalizedKey, $normalizedTarget) == 0 || index($normalizedTarget, $normalizedKey) == 0)) {
-			$prefixMatch = $plugins->{$pluginKey};
-		}
 	}
-	return $prefixMatch;
+	return undef;
 }
 
 sub _pluginDisplayNameForNamespace {
@@ -647,7 +662,7 @@ sub _pluginDisplayNameForNamespace {
 	return undef unless $namespace =~ /^plugin\.(.+)$/;
 	my $shortName = $1;
 
-	my $manifestEntry = _findPluginManifestEntry($shortName);
+	my $manifestEntry = _findPluginManifestEntryExact($shortName);
 	if ($manifestEntry && $manifestEntry->{'name'} && Slim::Utils::Strings::stringExists($manifestEntry->{'name'})) {
 		return Slim::Utils::Strings::string($manifestEntry->{'name'});
 	}
@@ -668,7 +683,7 @@ sub _pluginDisplayNameForNamespace {
 
 sub _isFirstPartyPlugin {
 	my $shortName = shift;
-	my $manifestEntry = _findPluginManifestEntry($shortName);
+	my $manifestEntry = _findPluginManifestEntryExact($shortName);
 	return 0 unless $manifestEntry;
 	my $module = $manifestEntry->{'module'};
 	return ($module && $module =~ /^Slim::Plugin::/) ? 1 : 0;
@@ -712,8 +727,9 @@ sub restoreFromBackup {
 	# prefs dir
 	my $prefsDir = Slim::Utils::Prefs::dir() || Slim::Utils::OSDetect::dirsFor('prefs');
 	my $pluginPrefsDir = catdir($prefsDir, 'plugin');
-	unless (_isTargetWritable($prefsDir)) {
-		$log->error("Cannot restore - preferences folder $prefsDir is not writable on this system, aborting restore");
+	my ($prefsDirWritable, $prefsDirExists) = _isTargetWritable($prefsDir);
+	unless ($prefsDirWritable) {
+		$log->error("Cannot restore - preferences folder $prefsDir ".($prefsDirExists ? 'is not writable' : 'does not exist')." on this system, aborting restore");
 		$prefs->set('status_backuprestore', 0);
 		return (0, 0);
 	}
@@ -732,8 +748,9 @@ sub restoreFromBackup {
 	}
 	for my $pathIdx (keys %customPathTargets) {
 		next unless $selectedNamespaces->{"custompath_$pathIdx"};
-		unless (_isTargetWritable($customPathTargets{$pathIdx})) {
-			$log->error("Cannot restore custom path $customPathTargets{$pathIdx} - target folder is not writable on this system, skipping this category");
+		my ($pathWritable, $pathExists) = _isTargetWritable($customPathTargets{$pathIdx});
+		unless ($pathWritable) {
+			$log->error("Cannot restore custom path $customPathTargets{$pathIdx} - target folder ".($pathExists ? 'is not writable' : 'does not exist')." on this system, skipping this category");
 			delete $customPathTargets{$pathIdx};
 		}
 	}
@@ -741,8 +758,9 @@ sub restoreFromBackup {
 	# playlist dir
 	my $playlistDir = $serverPrefs->get('playlistdir');
 	if ($playlistDir && grep { $selectedNamespaces->{$_} } qw(playlists_media playlists_text playlists_other)) {
-		unless (_isTargetWritable($playlistDir)) {
-			$log->error("Cannot restore playlist folder contents - target folder $playlistDir is not writable on this system, skipping this category");
+		my ($playlistDirWritable, $playlistDirExists) = _isTargetWritable($playlistDir);
+		unless ($playlistDirWritable) {
+			$log->error("Cannot restore playlist folder contents - target folder $playlistDir ".($playlistDirExists ? 'is not writable' : 'does not exist')." on this system, skipping this category");
 			undef $playlistDir;
 		}
 	}
@@ -752,9 +770,12 @@ sub restoreFromBackup {
 	for my $dirType (qw(Graphics HTML IR)) {
 		my ($dir) = Slim::Utils::OSDetect::dirsFor($dirType);
 		next unless $dir && -d $dir;
-		if ($selectedNamespaces->{'extrafiles_'.lc($dirType)} && !_isTargetWritable($dir)) {
-			$log->error("Cannot restore $dirType files - target folder $dir is not writable on this system, skipping this category");
-			next;
+		if ($selectedNamespaces->{'extrafiles_'.lc($dirType)}) {
+			my ($dirWritable, $dirExists) = _isTargetWritable($dir);
+			unless ($dirWritable) {
+				$log->error("Cannot restore $dirType files - target folder $dir ".($dirExists ? 'is not writable' : 'does not exist')." on this system, skipping this category");
+				next;
+			}
 		}
 		$extraSystemDirs{lc($dirType)} = $dir;
 	}
@@ -1006,14 +1027,15 @@ sub _requeuePendingRescanAfterRestart {
 
 sub _isTargetWritable {
 	my $dir = shift;
-	return 0 unless $dir;
+	return (0, 0) unless $dir;
 
+	my $pathExists = -d $dir ? 1 : 0;
 	while ($dir && !-d $dir) {
 		my $parentDir = dir($dir)->parent->stringify;
 		last if $parentDir eq $dir;
 		$dir = $parentDir;
 	}
-	return $dir && -w $dir;
+	return ($dir && -w $dir, $pathExists);
 }
 
 sub _safeWriteFile {
@@ -1065,10 +1087,14 @@ sub _initTracksPersistentRestore {
 	$tpRestoreDateAdded = $restoreDateAdded;
 	$tpRestorePlayCountLastPlayed = $restorePlayCountLastPlayed;
 	$tpTotalTrackCount = _getTracksPersistentBackupTrackCount($xmlFile);
+	($tpBackupSourceOS, $tpBackupSourceCodepage) = _getTracksPersistentBackupSourceInfo($xmlFile);
+	my $currentOSDetails = Slim::Utils::OSDetect::details();
+	$tpPreferCodepageFirst = (defined $tpBackupSourceOS && $tpBackupSourceOS eq 'Windows' && ($currentOSDetails->{'os'} || '') ne 'Windows') ? 1 : 0;
 	$tpProcessedTrackCount = 0;
 	$tpRestoreErrors = 0;
 	$tpUnidentifiableCount = 0;
 	$tpUnmatchedCount = 0;
+	@tpUnmatchedTrackURLs = ();
 
 	if (defined($tpBackupParserNB)) {
 		eval { $tpBackupParserNB->parse_done };
@@ -1093,6 +1119,32 @@ sub _initTracksPersistentRestore {
 
 	main::INFOLOG && $log->is_info && $log->info('Starting tracks_persistent restore from backup file');
 	Slim::Utils::Scheduler::add_task(\&_tpRestoreScanFunction);
+}
+
+sub _getTracksPersistentBackupSourceInfo {
+	my $xmlFile = shift;
+	my ($sourceOS, $sourceCodepage);
+
+	open(my $fh, '<', $xmlFile) or do {
+		$log->warn("Could not open backup file to detect its source OS: $xmlFile ($!)");
+		return (undef, undef);
+	};
+	for (1..15) {
+		my $line = <$fh>;
+		last unless defined $line;
+		if ($line =~ /<backupos>(.*?)<\/backupos>/) {
+			$sourceOS = $1 || undef;
+		}
+		if ($line =~ /<backupcodepage>(.*?)<\/backupcodepage>/) {
+			$sourceCodepage = $1 || undef;
+		}
+		last if defined $sourceOS && defined $sourceCodepage;
+	}
+	close($fh);
+
+	main::INFOLOG && $log->is_info && $log->info('Backup source OS: '.($sourceOS || 'unknown (pre-dates this field)').', codepage: '.($sourceCodepage || 'n/a'));
+
+	return ($sourceOS, $sourceCodepage);
 }
 
 sub _getTracksPersistentBackupTrackCount {
@@ -1146,21 +1198,22 @@ sub _tpRestoreScanFunction {
 	}
 
 	if (defined $tpBackupParserNB) {
-		local $/ = '>';
-		my $line;
-
-		for (my $i = 0; $i < 25;) {
-			my $singleLine = <$tpRestoreFH>;
-			if (defined($singleLine)) {
-				$line .= $singleLine;
-				if ($singleLine =~ /(<\/track>)$/) {
-					$i++;
+		my ($line, $reachedEOF);
+		{
+			local $/ = '>';
+			for (my $i = 0; $i < 25;) {
+				my $singleLine = <$tpRestoreFH>;
+				if (defined($singleLine)) {
+					$line .= $singleLine;
+					if ($singleLine =~ /(<\/track>)$/) {
+						$i++;
+					}
+				} else {
+					last;
 				}
-			} else {
-				last;
 			}
+			$reachedEOF = eof($tpRestoreFH);
 		}
-		my $reachedEOF = eof($tpRestoreFH);
 		$line //= '';
 		$line =~ s/&#(\d*);/escape(chr($1))/ge;
 		eval { $tpBackupParserNB->parse_more($line) };
@@ -1189,8 +1242,8 @@ sub _tpRestoreScanFunction {
 }
 
 sub _finishRestore {
-	my $result = shift; # 1 = success, 2 = error, 3 = success, requires rescan (mapped to global result codes below)
-	my $resultCode = { 1 => 3, 2 => 4, 3 => 5 }->{$result};
+	my ($result, $skipped) = @_; # result: 1 = success, 2 = error, 3 = success, requires rescan (mapped to global result codes below)
+	my $resultCode = $skipped ? { 1 => 6, 2 => 4, 3 => 7 }->{$result} : { 1 => 3, 2 => 4, 3 => 5 }->{$result};
 	$prefs->set('backuprestoreresult', $resultCode);
 	$prefs->set('backuprestoreprogresspercentage', 100);
 	$prefs->set('status_backuprestore', 0);
@@ -1207,14 +1260,34 @@ sub _tpDoneScanning {
 	close($tpRestoreFH) if $tpRestoreFH;
 	$tpRestoreFH = undef;
 
-	main::INFOLOG && $log->is_info && $log->info('tracks_persistent restore completed after '.(time() - $tpRestoreStarted).' seconds. Restored '.$tpRestoreCount.($tpRestoreCount == 1 ? ' track.' : ' tracks.'));
-	my $tpFailedCount = $tpUnidentifiableCount + $tpUnmatchedCount;
-	if ($tpFailedCount && !$tpRestoreCount) {
-		$log->error("Track statistics restore matched 0 of $tpProcessedTrackCount track(s) in the backup to a track in the current library - nothing was restored.");
-	} elsif ($tpFailedCount) {
-		$log->warn("Track statistics restore could not match $tpFailedCount of $tpProcessedTrackCount track(s) in the backup to a track in the current library - their values were skipped.");
+	my $skippedCount = $tpUnidentifiableCount + $tpUnmatchedCount;
+	my $elapsedSeconds = time() - $tpRestoreStarted;
+	my $itemsWord = $tpRestoreCount == 1 ? 'track' : 'tracks';
+	my $wikiURL = 'https://github.com/AF-1/sobras/wiki/Restoring-backups-across-operating-systems';
+
+	if ($tpRestoreErrors) {
+		my $errorMsg = "Track statistics restore completed after $elapsedSeconds seconds with errors. Restored $tpRestoreCount $itemsWord, $tpRestoreErrors item(s) failed to import due to a parsing or database error";
+		$errorMsg .= " and $skippedCount item(s) were skipped (unmatched or unidentifiable)" if $skippedCount;
+		$errorMsg .= " - check the server log for details. More info: $wikiURL\n\n";
+		$log->error($errorMsg);
+	} elsif ($skippedCount) {
+		if (!$tpRestoreCount) {
+			$log->error("Track statistics restore matched 0 of $tpProcessedTrackCount track(s) in the backup to a track in the current library - nothing was restored.");
+		}
+		if ($tpUnidentifiableCount) {
+			$log->error("Track statistics restore: $tpUnidentifiableCount of $tpProcessedTrackCount track(s) had no usable identifier (no urlmd5, url or musicbrainz id) in the backup entry itself and were skipped - this usually indicates a corrupted or unusually old backup file. Enable INFO level logging before the next restore for a per-track list.");
+		}
+		if ($tpUnmatchedCount) {
+			_tpWriteUnmatchedTracksToFile();
+			$log->error("Track statistics restore: $tpUnmatchedCount of $tpProcessedTrackCount track(s) had a valid identifier in the backup but no matching track was found in the current library and those values were skipped - this can happen if those tracks were since deleted, moved or renamed. See MIGA_Restore-Unmatched-Tracks.txt in the LMS prefs folder for the full list.");
+		}
+		$log->error("Track statistics restore completed after $elapsedSeconds seconds with $skippedCount of $tpProcessedTrackCount track(s) skipped. More info: $wikiURL\n\n");
+	} else {
+		main::INFOLOG && $log->is_info && $log->info("Track statistics restore completed after $elapsedSeconds seconds. Restored $tpRestoreCount $itemsWord.\n\n");
 	}
-	_finishRestore($tpRestoreErrors > 0 ? 2 : ($prefs->get('restorependingrescan') ? 3 : 1));
+	@tpUnmatchedTrackURLs = ();
+
+	_finishRestore($tpRestoreErrors > 0 ? 2 : ($prefs->get('restorependingrescan') ? 3 : 1), $skippedCount > 0);
 }
 
 sub _tpHandleStartElement {
@@ -1246,40 +1319,123 @@ sub _tpHandleEndElement {
 		$tpInTrack = 0;
 
 		my $curTrack = \%tpRestoreItem;
-		my $trackURL;
-		my $fullTrackURL = $curTrack->{'url'};
+		my $fullTrackURLraw = $curTrack->{'url'};
 		my $backupTrackURLmd5 = $curTrack->{'urlmd5'};
 		my $isRemote = $curTrack->{'remote'};
-		my $relTrackURL = $curTrack->{'relurl'};
+		my $relTrackURLraw = $curTrack->{'relurl'};
 		my $trackMBID = $curTrack->{'musicbrainzid'};
 
-		$fullTrackURL = Encode::decode('utf8', unescape($fullTrackURL));
-		$relTrackURL = Encode::decode('utf8', unescape($relTrackURL)) if $relTrackURL;
+		my $fullTrackURL = Encode::decode('utf8', unescape($fullTrackURLraw));
 
-		if ($isRemote && $isRemote == 1) {
-			$trackURL = $fullTrackURL;
-		} else {
-			my $fullTrackPath = pathForItem($fullTrackURL);
-			if ($fullTrackPath && -f $fullTrackPath) {
-				$trackURL = $fullTrackURL;
-			} elsif ($relTrackURL) {
-				my $lmsmusicdirs = getMusicDirs();
-				foreach (@{$lmsmusicdirs}) {
-					my $dirSep = File::Spec->canonpath("/");
-					my $mediaDirURL = Slim::Utils::Misc::fileURLFromPath($_.$dirSep);
-					my $newFullTrackURL = $mediaDirURL.$relTrackURL;
-					my $newFullTrackPath = pathForItem($newFullTrackURL);
-					if (-f $newFullTrackPath) {
-						$trackURL = Slim::Utils::Misc::fileURLFromPath($newFullTrackURL);
-						last;
-					}
+		# encode_locale() matches whatever byte encoding this LMS instance itself used when it scanned
+		# local files (UTF-8 on Linux/macOS, the active ANSI codepage on Windows) - falls back to plain
+		# UTF-8 encoding on LMS versions that lack this function
+		my $encodeForLocalPath = Slim::Utils::Unicode->can('encode_locale') ? \&Slim::Utils::Unicode::encode_locale : sub { return Encode::encode('utf8', $_[0]); };
+
+		# a Windows source backup names its own codepage; without that field, still try the common
+		# Western default unless the source is positively known to be non-Windows (Darwin/Linux)
+		my $sourceCodepage = $tpBackupSourceCodepage || ((!defined $tpBackupSourceOS || $tpBackupSourceOS eq 'Windows') ? 'cp1252' : undef);
+
+		# builds NFC and NFD variants from already-decoded text, re-encoded for this machine's locale;
+		# $isFullURL also runs the result back through fileURLFromPath/pathFromFileURL for full URLs
+		my $buildNfcNfdVariants = sub {
+			my ($decodedText, $isFullURL) = @_;
+			return (undef, undef) unless defined $decodedText;
+			my $nfc = $encodeForLocalPath->(Unicode::Normalize::NFC($decodedText));
+			my $nfd = $encodeForLocalPath->(Unicode::Normalize::NFD($decodedText));
+			if ($isFullURL) {
+				$nfc = Slim::Utils::Misc::fileURLFromPath(Slim::Utils::Misc::pathFromFileURL($nfc));
+				$nfd = Slim::Utils::Misc::fileURLFromPath(Slim::Utils::Misc::pathFromFileURL($nfd));
+			}
+			return ($nfc, $nfd);
+		};
+
+		my ($fullTrackURLnfc, $fullTrackURLnfd, $fullTrackURLcpNfc, $fullTrackURLcpNfd);
+		if ($fullTrackURLraw) {
+			my $fullTrackURLrawBytes = unescape(unescape($fullTrackURLraw));
+
+			($fullTrackURLnfc, $fullTrackURLnfd) = $buildNfcNfdVariants->(Encode::decode('utf8', $fullTrackURLrawBytes), 1);
+
+			# a Windows source may have written its own file:// URL using the active ANSI codepage
+			# instead of UTF-8 (e.g. a single 0xE3 byte for one accented character) - decode with that
+			# codepage instead of UTF-8, then build the same NFC/NFD variants as above
+			if ($sourceCodepage) {
+				my $fullTrackURLcpDecoded = eval { Encode::decode($sourceCodepage, $fullTrackURLrawBytes) };
+				main::DEBUGLOG && $log->is_debug && $log->debug("Could not decode full track URL as $sourceCodepage: $@") if $@;
+				($fullTrackURLcpNfc, $fullTrackURLcpNfd) = $buildNfcNfdVariants->($fullTrackURLcpDecoded, 1) if defined $fullTrackURLcpDecoded;
+			}
+		}
+
+		my ($relTrackURL, $relTrackURLnfc, $relTrackURLnfd, $relTrackURLcpNfc, $relTrackURLcpNfd);
+		if ($relTrackURLraw) {
+			$relTrackURL = Encode::decode('utf8', unescape($relTrackURLraw));
+			$relTrackURL =~ s/^\.\///;
+
+			# second unescape pass fully resolves double-encoded backup entries down to raw bytes;
+			# NFC/NFD-normalizes to cover both migration directions (macOS decomposes, most other
+			# filesystems compose), re-encoded for this machine's locale for a consistent fileURLFromPath() call
+			my $relTrackURLrawBytes = unescape(unescape($relTrackURLraw));
+			my $relTrackURLdecoded = Encode::decode('utf8', $relTrackURLrawBytes);
+			$relTrackURLdecoded =~ s/^\.\///;
+
+			($relTrackURLnfc, $relTrackURLnfd) = $buildNfcNfdVariants->($relTrackURLdecoded, 0);
+
+			# same Windows-codepage fallback as above, applied to the relative path
+			if ($sourceCodepage) {
+				my $relTrackURLcpDecoded = eval { Encode::decode($sourceCodepage, $relTrackURLrawBytes) };
+				main::DEBUGLOG && $log->is_debug && $log->debug("Could not decode relative track URL as $sourceCodepage: $@") if $@;
+				if (defined $relTrackURLcpDecoded) {
+					$relTrackURLcpDecoded =~ s/^\.\///;
+					($relTrackURLcpNfc, $relTrackURLcpNfd) = $buildNfcNfdVariants->($relTrackURLcpDecoded, 0);
 				}
 			}
 		}
 
-		if (!$trackURL && !$backupTrackURLmd5 && !$trackMBID) {
+		# build every plausible current URL for this track (the full backup URL + one reconstruction per configured media folder for local tracks) and check them against the tracks_persistent table
+		my @candidateURLs;
+		my %seenFullURL;
+		for my $candidate ($tpPreferCodepageFirst ? ($fullTrackURLcpNfc, $fullTrackURLcpNfd, $fullTrackURL, $fullTrackURLnfc, $fullTrackURLnfd) : ($fullTrackURL, $fullTrackURLnfc, $fullTrackURLnfd, $fullTrackURLcpNfc, $fullTrackURLcpNfd)) {
+			next unless $candidate;
+			next if $seenFullURL{$candidate}++;
+			push @candidateURLs, $candidate;
+		}
+
+		if (!($isRemote && $isRemote == 1) && $relTrackURL) {
+			my $lmsmusicdirs = getMusicDirs();
+			my $dirSep = File::Spec->canonpath("/");
+			my %seenRawRelPath;
+			my @rawRelPathVariants;
+			for my $relPath ($tpPreferCodepageFirst ? ($relTrackURLcpNfc, $relTrackURLcpNfd, $relTrackURLnfc, $relTrackURLnfd) : ($relTrackURLnfc, $relTrackURLnfd, $relTrackURLcpNfc, $relTrackURLcpNfd)) {
+				next unless $relPath;
+				next if $seenRawRelPath{$relPath}++;
+				push @rawRelPathVariants, $relPath;
+			}
+			foreach my $mediaDir (@{$lmsmusicdirs}) {
+				if ($tpPreferCodepageFirst) {
+					push @candidateURLs, map { Slim::Utils::Misc::fileURLFromPath($mediaDir.$dirSep.$_) } @rawRelPathVariants;
+					push @candidateURLs, Slim::Utils::Misc::fileURLFromPath($mediaDir.$dirSep).$relTrackURL;
+				} else {
+					push @candidateURLs, Slim::Utils::Misc::fileURLFromPath($mediaDir.$dirSep).$relTrackURL;
+					push @candidateURLs, map { Slim::Utils::Misc::fileURLFromPath($mediaDir.$dirSep.$_) } @rawRelPathVariants;
+				}
+			}
+		}
+		main::DEBUGLOG && $log->is_debug && $log->debug('Candidate URLs for this track: '.Data::Dump::dump(\@candidateURLs));
+
+		my @urlmd5Candidates;
+		push @urlmd5Candidates, $backupTrackURLmd5 if $backupTrackURLmd5;
+		for my $candidateURL (@candidateURLs) {
+			my $freshUrlmd5 = md5_hex($candidateURL);
+			push @urlmd5Candidates, $freshUrlmd5 unless grep { $_ eq $freshUrlmd5 } @urlmd5Candidates;
+			if (Slim::Utils::Misc->can('safe_md5_hex')) {
+				my $freshSafeUrlmd5 = Slim::Utils::Misc::safe_md5_hex($candidateURL);
+				push @urlmd5Candidates, $freshSafeUrlmd5 unless grep { $_ eq $freshSafeUrlmd5 } @urlmd5Candidates;
+			}
+		}
+
+		if (!@urlmd5Candidates && !$trackMBID) {
 			$tpUnidentifiableCount++;
-			main::DEBUGLOG && $log->is_debug && $log->debug("No valid urlmd5, url or musicbrainz id for this track - can't restore values. Backup URL was: ".Data::Dump::dump($fullTrackURL));
+			main::INFOLOG && $log->is_info && $log->info("No valid urlmd5, url or musicbrainz id for this track - can't restore values. Backup URL was: ".Data::Dump::dump($fullTrackURL));
 		} else {
 			my (@setParts, @bindVals);
 			if ($tpRestoreDateAdded) {
@@ -1297,17 +1453,6 @@ sub _tpHandleEndElement {
 			if (@setParts) {
 				my $setClause = 'set '.join(', ', @setParts);
 				my $dbh = Slim::Schema->dbh;
-
-				my @urlmd5Candidates;
-				push @urlmd5Candidates, $backupTrackURLmd5 if $backupTrackURLmd5;
-				if ($trackURL) {
-					my $freshUrlmd5 = md5_hex($trackURL);
-					push @urlmd5Candidates, $freshUrlmd5 unless grep { $_ eq $freshUrlmd5 } @urlmd5Candidates;
-					if (Slim::Utils::Misc->can('safe_md5_hex')) {
-						my $freshSafeUrlmd5 = Slim::Utils::Misc::safe_md5_hex($trackURL);
-						push @urlmd5Candidates, $freshSafeUrlmd5 unless grep { $_ eq $freshSafeUrlmd5 } @urlmd5Candidates;
-					}
-				}
 
 				my $updated = 0;
 				for my $urlmd5Candidate (@urlmd5Candidates) {
@@ -1342,7 +1487,12 @@ sub _tpHandleEndElement {
 						}
 					}
 				}
-				$tpUnmatchedCount++ unless $updated;
+
+				unless ($updated) {
+					$tpUnmatchedCount++;
+					push @tpUnmatchedTrackURLs, $fullTrackURL || '(no URL in backup entry)';
+					main::DEBUGLOG && $log->is_debug && $log->debug("Could not find a matching track in the current library for this track - tried urlmd5 candidates: ".Data::Dump::dump(\@urlmd5Candidates).", musicbrainz id: ".Data::Dump::dump($trackMBID).". Backup URL was: ".Data::Dump::dump($fullTrackURL));
+				}
 			}
 		}
 		$tpProcessedTrackCount++;
@@ -1356,8 +1506,22 @@ sub _tpHandleEndElement {
 	}
 }
 
+sub _tpWriteUnmatchedTracksToFile {
+	my $prefsDir = Slim::Utils::Prefs::dir() || Slim::Utils::OSDetect::dirsFor('prefs');
+	my $filename = catfile($prefsDir, 'MIGA_Restore-Unmatched-Tracks.txt');
+	my $output = FileHandle->new($filename, '>:utf8') or do {
+		$log->error('Could not open '.$filename.' for writing. Does LMS have read/write permissions (755) for the prefs folder?');
+		return;
+	};
+	print $output strftime("%Y-%m-%d -- %H:%M:%S", localtime time)."\n";
+	print $output scalar(@tpUnmatchedTrackURLs)." track(s) could not be matched during the last restore:\n\n";
+	print $output $_."\n" foreach @tpUnmatchedTrackURLs;
+	close $output;
+}
 
-# misc
+
+## misc
+
 sub getMusicDirs {
 	my $mediadirs = $serverPrefs->get('mediadirs');
 	my $ignoreInAudioScan = $serverPrefs->get('ignoreInAudioScan');
@@ -1370,6 +1534,18 @@ sub getMusicDirs {
 		}
 	}
 	return $lmsmusicdirs;
+}
+
+sub getBackupCodepage {
+	return undef unless main::ISWINDOWS;
+	my $codepage;
+	eval {
+		require Win32;
+		my $cp = Win32::GetACP();
+		$codepage = 'cp'.$cp if $cp;
+	};
+	main::DEBUGLOG && $log->is_debug && $log->debug('Could not determine Windows codepage: '.$@) if $@;
+	return $codepage;
 }
 
 sub getRelFilePath {
@@ -1389,6 +1565,7 @@ sub getRelFilePath {
 			$relFilePath = file($fullTrackPath)->relative($_);
 			$relFilePath = Slim::Utils::Misc::fileURLFromPath($relFilePath);
 			$relFilePath =~ s/^(file:)?\/+//isg;
+			$relFilePath =~ s/^\.\///;
 			main::DEBUGLOG && $log->is_debug && $log->debug('Saving RELATIVE file path: '.$relFilePath);
 			last;
 		}
@@ -1423,7 +1600,7 @@ sub pathForItem {
 	return $item;
 }
 
-sub getDisplayName {'PLUGIN_MIGRATIONSASSISTANT'}
+sub getDisplayName {'PLUGIN_MIGRATIONASSISTANT'}
 
 *escape = \&URI::Escape::uri_escape_utf8;
 *unescape = \&URI::Escape::uri_unescape;

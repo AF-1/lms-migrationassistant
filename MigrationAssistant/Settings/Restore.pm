@@ -24,7 +24,7 @@ sub new {
 }
 
 sub name {
-	return Slim::Web::HTTP::CSRF->protectName('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE');
+	return Slim::Web::HTTP::CSRF->protectName('PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE');
 }
 
 sub page {

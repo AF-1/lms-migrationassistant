@@ -11,13 +11,13 @@
 	.migascanstatus:after{font-size:180%;content:' .';animation:migadots 1.8s steps(5,end)infinite}
 	@keyframes migadots{0%,20%{color:var(--miga-status-text-shadow-color);text-shadow:.25em 0 0 var(--miga-status-text-shadow-color),.5em 0 0 var(--miga-status-text-shadow-color)}40%{color:var(--miga-status-main-color);text-shadow:.25em 0 0 var(--miga-status-text-shadow-color),.5em 0 0 var(--miga-status-text-shadow-color)}60%{text-shadow:.25em 0 0 var(--miga-status-main-color),.5em 0 0 var(--miga-status-text-shadow-color)}80%,100%{text-shadow:.25em 0 0 var(--miga-status-main-color),.5em 0 0 var(--miga-status-main-color)}}
 </style>
-[% page = "PLUGIN_MIGRATIONSASSISTANT" %]
+[% page = "PLUGIN_MIGRATIONASSISTANT" %]
 [% PROCESS settings/header.html %]
 
 [% PROCESS plugins/MigrationAssistant/settings/subpage_chooser.html %]
 
 <div class="setting[% IF systemSkin == "material" %]Group[% ELSE %]Section[% END %]">
-	[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_INTRO" | string %]
+	[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INTRO" | string %]
 </div>
 <br>
 
@@ -27,21 +27,21 @@
 <div id="migabackuprestoreprogresswrapper"><div id="migabackuprestoreprogressbar"></div></div>
 <br>
 
-[% WRAPPER setting title="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_SELECTOUTPUTFOLDER" desc="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_SELECTOUTPUTFOLDER_DESC" %]
+[% WRAPPER setting title="PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_SELECTOUTPUTFOLDER" desc="PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_SELECTOUTPUTFOLDER_DESC" %]
 	<input type="text" class="stdedit selectFolder" name="pref_backupoutputfolder" id="backupoutputfolder" value="[% backupoutputfolder %]" size="40"><br><br>
-	<input name="backup" type="submit" class="stdclick" id="migabackupbutton" value="[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_BUTTON" | string %]"[% IF activebackuprestore %] disabled[% END %]>
+	<input name="backup" type="submit" class="stdclick" id="migabackupbutton" value="[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_BUTTON" | string %]"[% IF activebackuprestore %] disabled[% END %]>
 	[% IF backupmissingoutputfolder || backupinvalidoutputfolder || backuperror %]
-	<span style="padding-left:5px;color:red;">[% IF backupmissingoutputfolder %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_MISSINGOUTPUTFOLDER" | string %][% ELSIF backupinvalidoutputfolder %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_INVALIDOUTPUTFOLDER" | string %][% ELSE %][% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_ERROR" | string %][% END %]</span>
+	<span style="padding-left:5px;color:red;">[% IF backupmissingoutputfolder %][% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_MISSINGOUTPUTFOLDER" | string %][% ELSIF backupinvalidoutputfolder %][% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INVALIDOUTPUTFOLDER" | string %][% ELSE %][% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_ERROR" | string %][% END %]</span>
 	[% END %]
 [% END %]
 <br><br>
-[% WRAPPER setting title="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATHS" desc="PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATHS_DESC" %]
-	[% IF extrapathrejected.size %]<span style="color:red;">[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATH_REJECTED" | string %] ([% extrapathrejected.join(', ') %])</span><br><br>[% END %]
-	[% IF extrapathduplicate.size %]<span style="color:red;">[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATH_DUPLICATE" | string %] ([% extrapathduplicate.join(', ') %])</span><br><br>[% END %]
+[% WRAPPER setting title="PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATHS" desc="PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATHS_DESC" %]
+	[% IF extrapathrejected.size %]<span style="color:red;">[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_REJECTED" | string %] ([% extrapathrejected.join(', ') %])</span><br><br>[% END %]
+	[% IF extrapathduplicate.size %]<span style="color:red;">[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_DUPLICATE" | string %] ([% extrapathduplicate.join(', ') %])</span><br><br>[% END %]
 	<table>
 		<tr>
-			<th style="text-align:left;">[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATH_SOURCE" | string %]</th>
-			<th style="text-align:left;padding-left:8px;">[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATH_TARGET" | string %]</th>
+			<th style="text-align:left;">[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_SOURCE" | string %]</th>
+			<th style="text-align:left;padding-left:8px;">[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_TARGET" | string %]</th>
 		</tr>
 		[% FOREACH entry = extrabackuppaths; idx = loop.count - 1 %]
 		<tr>
@@ -105,7 +105,7 @@
 				} else {
 					migaSetButtonsDisabled(true);
 					if (value == 1) {
-						migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_INPROGRESS" | string %]', 'migastatus migascanstatus');
+						migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INPROGRESS" | string %]', 'migastatus migascanstatus');
 						document.getElementById('migabackuprestoreprogresswrapper').style.display = 'block';
 						migaGetPrefVal('backuprestoreprogresspercentage');
 					}
@@ -114,10 +114,10 @@
 				document.getElementById('migabackuprestoreprogressbar').style.width = value + '%';
 			} else if (prefName == 'backuprestoreresult') {
 				if (value == 1) {
-					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_SUCCESS" | string %]', 'migasuccess');
+					migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_SUCCESS" | string %]', 'migasuccess');
 					setTimeout(migaGetPrefVal, 3000, 'backuprestoreresult', '0');
 				} else if (value == 2) {
-					migaShowStatus('[% "PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_ERROR" | string %]', 'migaerror');
+					migaShowStatus('[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_ERROR" | string %]', 'migaerror');
 					setTimeout(migaGetPrefVal, 3000, 'backuprestoreresult', '0');
 				}
 			}

@@ -24,7 +24,7 @@ sub new {
 }
 
 sub name {
-	return Slim::Web::HTTP::CSRF->protectName('PLUGIN_MIGRATIONSASSISTANT');
+	return Slim::Web::HTTP::CSRF->protectName('PLUGIN_MIGRATIONASSISTANT');
 }
 
 sub page {
@@ -36,7 +36,7 @@ sub currentPage {
 }
 
 sub pages {
-	return [{ 'name' => Slim::Web::HTTP::CSRF->protectName('PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP'), 'page' => page() }];
+	return [{ 'name' => Slim::Web::HTTP::CSRF->protectName('PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP'), 'page' => page() }];
 }
 
 sub prefs {

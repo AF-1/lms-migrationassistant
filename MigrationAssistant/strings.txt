@@ -1,194 +1,203 @@
-PLUGIN_MIGRATIONSASSISTANT
+PLUGIN_MIGRATIONASSISTANT
 	EN	Migration Assistant
 
-PLUGIN_MIGRATIONSASSISTANT_DESC
+PLUGIN_MIGRATIONASSISTANT_DESC
 	EN	Backup and restore server and plugin settings and files
 
-PLUGIN_MIGRATIONSASSISTANT_LOG_DESC
+PLUGIN_MIGRATIONASSISTANT_LOG_DESC
 	EN	Log of plugin Migration Assistant
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_SUBPAGE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_SUBPAGE
 	EN	Settings Section
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_SUBPAGE_DESC
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_SUBPAGE_DESC
 	EN	Select a settings section
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_FAQ_LINK_TEXT
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_FAQ_LINK_TEXT
 	EN	Click here for more information.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_FAQ_LINK
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_FAQ_LINK
 	EN	https://github.com/AF-1
 
 
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP
 	EN	Backup
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_INTRO
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INTRO
 	EN	This creates a backup archive containing:<br><br><span style="display:inline-block; width:2em;"></span>&bull;&nbsp;LMS and plugin preference files<br><br><span style="display:inline-block; width:2em;"></span>&bull;&nbsp;a small selection of per-track values (date added, play count, last played)<br><br><span style="display:inline-block; width:2em;"></span>&bull;&nbsp;your <i>playlist folder</i> contents (including subfolders)<br><br><span style="display:inline-block; width:2em;"></span>&bull;&nbsp;<i>plugin data folders</i> of plugins Alternative Play Count, Custom Skip, Dynamic Playlist Creator, Dynamic Playlists, Ratings Light, Virtual Library Creator<br><br><span style="display:inline-block; width:2em;"></span>&bull;&nbsp;OPML/Favorites files and logging settings (log.conf)<br><br><span style="display:inline-block; width:2em;"></span>&bull;&nbsp;Custon IR remote mappings, custom graphics and custom HTML/skin files<br><br>Want to include a specific plugin's data folder as well? Enter its full path below.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_SELECTOUTPUTFOLDER
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_SELECTOUTPUTFOLDER
 	EN	Select a backup output folder
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_SELECTOUTPUTFOLDER_DESC
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_SELECTOUTPUTFOLDER_DESC
 	EN	Select a folder where you want to save the backup archive to.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_BUTTON
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_BUTTON
 	EN	Backup now
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_INPROGRESS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INPROGRESS
 	EN	Creating backup
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_MISSINGOUTPUTFOLDER
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_MISSINGOUTPUTFOLDER
 	EN	You have to select a folder first!
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_INVALIDOUTPUTFOLDER
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INVALIDOUTPUTFOLDER
 	EN	The selected folder does not exist.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_SUCCESS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_SUCCESS
 	EN	Backup created successfully.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_ERROR
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_ERROR
 	EN	Backup failed. Please check the server log for details.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATHS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATHS
 	EN	Additional folders to back up (optional)
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATHS_DESC
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATHS_DESC
 	EN	Enter the full path of any additional folder you want included in the backup (e.g. a plugin's data folder). Target folder is optional - leave empty to restore to the same path.<br>Protected system folders - the LMS preferences folder, cache folder, Plugins folder and your configured media library folders - cannot be added here.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATH_SOURCE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_SOURCE
 	EN	Source folder (this system)
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATH_TARGET
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_TARGET
 	EN	Target folder (new system, optional)
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATH_REJECTED
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_REJECTED
 	EN	This folder cannot be backed up (overlaps with a protected system folder):
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_BACKUP_EXTRAPATH_DUPLICATE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_DUPLICATE
 	EN	This folder is already backed up automatically as one of your plugins' data folders and doesn't need to be added here:
 
 
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE
 	EN	Restore
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_INTRO
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_INTRO
 	EN	<b>Use at your own risk.</b> This is an experimental feature. <span style="color:red;">Please create your own backup of all relevant files beforehand.</span><br><br>Before restoring, you can preview the archive's contents and choose exactly which items to restore.<br><br>Restoring onto a freshly installed server? Let the initial library scan complete first, then install the plugins you want to use, and only then restore from your backup.<br><br>After restoring, you need to restart Lyrion Music Server manually for the changes to take effect. If any of the restored settings require a media library rescan, you'll be told so after the restore and need to trigger one manually afterwards.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECTFILE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECTFILE
 	EN	Select a backup file to restore from
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECTFILE_DESC
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECTFILE_DESC
 	EN	Select a backup file (created with <i>Migration Assistant</i>) to restore your backup files from.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_LIST_BUTTON
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_LIST_BUTTON
 	EN	List contents
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECTITEMS_DESC
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECTITEMS_DESC
 	EN	Select which items you want to restore:
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_TRACKSTATS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_TRACKSTATS
 	EN	Track Statistics
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_SERVER
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_SERVER
 	EN	Server Settings
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_CORE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_CORE
 	EN	LMS Built-in Plugins: Settings
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_THIRDPARTY
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_THIRDPARTY
 	EN	Third-Party Plugins: Settings
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_NOTINSTALLED
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_NOTINSTALLED
 	EN	Other Plugins (not installed at backup time): Settings
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SKIPPREFS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SKIPPREFS
 	EN	Skip preferences during restore (optional)
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SKIPPREFS_DESC
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SKIPPREFS_DESC
 	EN	Comma-separated list of preferences to always skip when restoring, in the format <i>namespace:prefname</i>.<br>Useful e.g. when migrating a server to a different platform or replicating preferences across multiple server instances, to avoid overwriting values that must stay unique or environment-specific per instance.<br><br>The following server values are always skipped by default, regardless of this list: server UUID, cache/database paths, security secret, bind address, media folder(s), playlist folder. The data folder path preferences of Alternative Play Count, Custom Skip, Dynamic Playlists, Dynamic Playlist Creator, Ratings Light and Virtual Library Creator are skipped by default as well, since Migration Assistant restores their contents to a new location automatically.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CREATEBAKS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CREATEBAKS
 	EN	Create .bak files when overwriting existing files
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CREATEBAKS_DESC
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CREATEBAKS_DESC
 	EN	When restoring files that already exist on a system (playlists, plugin data folders, custom paths, log.conf, custom graphics/HTML/IR files and preference files), Migration Assistant keeps one timestamped .bak copy of the previous version by default. Disable this if you don't want these BAK copies (e.g. to save disk space) - existing files will be overwritten directly and cannot be recovered afterwards.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_DATEADDED_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DATEADDED_LABEL
 	EN	Date added of all tracks
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYCOUNTLASTPLAYED_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_PLAYCOUNTLASTPLAYED_LABEL
 	EN	Play Count / Last Played of all tracks (LMS, not APC)
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_MEDIA_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_PLAYLISTS_MEDIA_LABEL
 	EN	Playlist files
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_TEXT_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_PLAYLISTS_TEXT_LABEL
 	EN	Text files in playlist folder
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_PLAYLISTS_OTHER_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_PLAYLISTS_OTHER_LABEL
 	EN	Other files in playlist folder
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_OPMLFILES_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_OPMLFILES_LABEL
 	EN	OPML/Favorites files
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_LOGCONF_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_LOGCONF_LABEL
 	EN	Logging settings (log.conf)
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_EXTRAFILES_GRAPHICS_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_EXTRAFILES_GRAPHICS_LABEL
 	EN	Custom Graphics
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_EXTRAFILES_HTML_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_EXTRAFILES_HTML_LABEL
 	EN	Custom HTML/Skin files
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_EXTRAFILES_IR_LABEL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_EXTRAFILES_IR_LABEL
 	EN	Custom IR remote mappings
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_PLAYLISTFOLDER
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLAYLISTFOLDER
 	EN	Playlist Folder
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_CUSTOMPATHS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_CUSTOMPATHS
 	EN	Additional Backed-up Folders
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_CATEGORY_OURPLUGINDATA
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_OURPLUGINDATA
 	EN	Plugin Data Folders
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_INPROGRESS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_INPROGRESS
 	EN	Restoring from backup
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SELECT_ALL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SELECT_ALL
 	EN	Select all
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_DESELECT_ALL
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DESELECT_ALL
 	EN	Deselect all
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_BUTTON
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_BUTTON
 	EN	Restore now
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_MISSINGFILE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_MISSINGFILE
 	EN	You have to select a file first!
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOZIPFILE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_NOZIPFILE
 	EN	Please select a valid ZIP file created with <i>Migration Assistant</i> !
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_FILENOTFOUND
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_FILENOTFOUND
 	EN	The selected file could not be found.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_NOITEMS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_NOITEMS
 	EN	This archive was read successfully but does not contain any recognizable Migration Assistant backup content.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE
 	EN	Target folder is not writable on this system - this item will be skipped during restore.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_PATHMISSING
+	EN	Target folder does not exist on this system - this item will be skipped during restore.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SUCCESS
 	EN	Restore completed. Please restart Lyrion Music Server now for the changes to take effect.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_SUCCESS_RESCAN_NEEDED
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SUCCESS_RESCAN_NEEDED
 	EN	Restore completed. Please restart Lyrion Music Server now for the changes to take effect.<br>⚠️ Some of the restored settings require a media library rescan. LMS will remind you to do this after the restart.
 
-PLUGIN_MIGRATIONSASSISTANT_SETTINGS_RESTORE_ERROR
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SUCCESS_TRACKS_SKIPPED
+	EN	Restore completed. Please restart Lyrion Music Server now for the changes to take effect.<br>⚠️ Some tracks could not be matched to your library and were skipped - please check the server log.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SUCCESS_RESCAN_NEEDED_TRACKS_SKIPPED
+	EN	Restore completed. Please restart Lyrion Music Server now for the changes to take effect.<br>⚠️ Some of the restored settings require a media library rescan. LMS will remind you to do this after the restart.<br>⚠️ Some tracks could not be matched to your library and were skipped - please check the server log.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ERROR
 	EN	Restore failed. Please check the server log for details.
 
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_RESTART_BANNER
