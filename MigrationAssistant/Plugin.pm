@@ -27,6 +27,7 @@ use File::Temp qw(tempdir);
 use FileHandle;
 use Path::Class;
 use XML::Parser;
+use XML::Simple qw(XMLin);
 use Unicode::Normalize;
 use Digest::MD5 qw(md5_hex);
 
@@ -67,12 +68,15 @@ sub initPlugin {
 
 sub postinitPlugin {
 	_requeuePendingRescanAfterRestart();
+	_enablePendingInstalledPlugins();
 }
 
 sub initPrefs {
 	$prefs->init({
 		restorependingrescan => 0,
 		restorecreatebaks => 1,
+		backupinstalledplugins => 0,
+		restorependinginstalledplugins => [],
 	});
 	$prefs->set('status_backuprestore', '0'); # 0 = idle, 1 = backup in progress, 2 = restore in progress
 	$prefs->set('backuprestoreprogresspercentage', '0');
@@ -169,6 +173,8 @@ sub createBackup {
 	main::DEBUGLOG && $log->is_debug && $log->debug('total backup time passed after exec of _backupCustomPaths = '.(time()-$bkpStarted));
 	_backupOurPluginDataFolders();
 	main::DEBUGLOG && $log->is_debug && $log->debug('total backup time passed after exec of _backupOurPluginDataFolders = '.(time()-$bkpStarted));
+	_backupInstalledPluginsFolder();
+	main::DEBUGLOG && $log->is_debug && $log->debug('total backup time passed after exec of _backupInstalledPluginsFolder = '.(time()-$bkpStarted));
 	_initTracksPersistentBackup();
 
 	return 1;
@@ -359,6 +365,53 @@ sub _backupOurPluginDataFolders {
 	}
 }
 
+sub _backupInstalledPluginsFolder {
+	return unless $prefs->get('backupinstalledplugins');
+
+	my $installedPluginsDir = catdir(Slim::Utils::OSDetect::dirsFor('cache'), 'InstalledPlugins', 'Plugins');
+	return unless -d $installedPluginsDir;
+
+	my @manifestLines;
+	opendir(my $dh, $installedPluginsDir) or return;
+	for my $folderName (readdir($dh)) {
+		next if $folderName eq '.' || $folderName eq '..';
+		my $pluginDir = catdir($installedPluginsDir, $folderName);
+		next unless -d $pluginDir;
+
+		my ($canonicalName, $version, $minLMSVersion) = _parseInstalledPluginManifest(catfile($pluginDir, 'install.xml'));
+		push @manifestLines, join("\t", $folderName, ($canonicalName || ''), ($version || ''), ($minLMSVersion || ''));
+	}
+	closedir($dh);
+
+	my $added = _backupDirToZip($installedPluginsDir, 'installedplugins');
+	if ($added && @manifestLines) {
+		$bkpZip->addString(join("\n", @manifestLines)."\n", 'installedplugins/manifest.txt');
+	}
+	main::INFOLOG && $log->is_info && $log->info("Backed up $added file(s) from InstalledPlugins folder: $installedPluginsDir") if $added;
+}
+
+sub _parseInstalledPluginManifest {
+	my $installXmlFile = shift;
+	return (undef, undef, undef) unless -f $installXmlFile;
+
+	my $manifest = eval { XMLin($installXmlFile, SuppressEmpty => undef) };
+	if ($@ || ref $manifest ne 'HASH') {
+		$log->error("Could not parse $installXmlFile: " . ($@ || 'invalid data'));
+		return (undef, undef, undef);
+	}
+
+	my $canonicalName;
+	if ($manifest->{'module'} && $manifest->{'module'} =~ /^Plugins::(.*)::/) {
+		$canonicalName = $1;
+	} elsif ($manifest->{'module'} && $manifest->{'module'} =~ /^Slim::Plugin::(.*)::/) {
+		$canonicalName = $1;
+	}
+
+	my $minLMSVersion = (ref $manifest->{'targetApplication'} eq 'HASH') ? $manifest->{'targetApplication'}->{'minVersion'} : undef;
+
+	return ($canonicalName, $manifest->{'version'}, $minLMSVersion);
+}
+
 sub _initTracksPersistentBackup {
 	my $dbh = Slim::Schema->dbh;
 	my ($trackURL, $trackURLmd5, $added, $playCount, $lastPlayed, $remote, $trackMBID);
@@ -494,7 +547,7 @@ sub listBackupContents {
 	}
 
 	my @contents;
-	my (%hasPlaylistBucket, %hasExtraSystem, %customPathIndices, %ourPluginShortNames, $customPathManifest, $hasOpml, $hasLogConf);
+	my (%hasPlaylistBucket, %hasExtraSystem, %customPathIndices, %ourPluginShortNames, %installedPluginFolderNames, $customPathManifest, $installedPluginManifest, $hasOpml, $hasLogConf);
 
 	for my $member ($zip->members) {
 		my $fileName = $member->fileName;
@@ -530,6 +583,14 @@ sub listBackupContents {
 		}
 		if ($fileName =~ m{^ourplugindata/([^/]+)/}) {
 			$ourPluginShortNames{$1} = 1;
+			next;
+		}
+		if ($fileName eq 'installedplugins/manifest.txt') {
+			$installedPluginManifest = $member->contents;
+			next;
+		}
+		if ($fileName =~ m{^installedplugins/([^/]+)/}) {
+			$installedPluginFolderNames{$1} = 1;
 			next;
 		}
 
@@ -604,6 +665,22 @@ sub listBackupContents {
 	for my $shortName (sort keys %ourPluginShortNames) {
 		my $displayName = _pluginDisplayNameForNamespace("plugin.$shortName") || $shortName;
 		push @contents, { namespace => "ourplugindata_$shortName", category => 'ourplugindata', label => $displayName, checked => 1 };
+	}
+
+	my %installedPluginInfo;
+	if ($installedPluginManifest) {
+		for my $line (split(/\n/, $installedPluginManifest)) {
+			my ($folderName, $canonicalName, $version, $minLMSVersion) = split(/\t/, $line);
+			next unless defined $folderName;
+			$installedPluginInfo{$folderName} = { canonicalname => $canonicalName, version => $version, minlmsversion => $minLMSVersion };
+		}
+	}
+	for my $folderName (sort keys %installedPluginFolderNames) {
+		my $info = $installedPluginInfo{$folderName} || {};
+		my $canonicalName = $info->{'canonicalname'} || $folderName;
+		my $displayName = _pluginDisplayNameForNamespace("plugin.$canonicalName") || $folderName;
+		my $alreadyInstalled = -d catdir(Slim::Utils::OSDetect::dirsFor('cache'), 'InstalledPlugins', 'Plugins', $folderName) ? 1 : 0;
+		push @contents, { namespace => "installedplugin_$folderName", category => 'installedplugins', label => $displayName, checked => 0, alreadyinstalled => $alreadyInstalled, canonicalname => $canonicalName };
 	}
 
 	@contents = sort { $a->{'label'} cmp $b->{'label'} } @contents;
@@ -721,6 +798,7 @@ sub restoreFromBackup {
 
 	my $skipPrefs = _parseRestoreSkipPrefs($prefs->get('restoreskipprefs'));
 	my %restoredOurPluginFolders;
+	my %restoredInstalledPluginFolders;
 	my $defaultSkipPrefs = _defaultSkipPrefsHash();
 	my $tempDir = tempdir(CLEANUP => 1);
 
@@ -752,6 +830,34 @@ sub restoreFromBackup {
 		unless ($pathWritable) {
 			$log->error("Cannot restore custom path $customPathTargets{$pathIdx} - target folder ".($pathExists ? 'is not writable' : 'does not exist')." on this system, skipping this category");
 			delete $customPathTargets{$pathIdx};
+		}
+	}
+
+	# installed (extension-manager) plugin folders
+	my %installedPluginCanonicalNames;
+	for my $manifestMember ($zip->members) {
+		if ($manifestMember->fileName eq 'installedplugins/manifest.txt') {
+			for my $line (split(/\n/, $manifestMember->contents)) {
+				my ($folderName, $canonicalName) = split(/\t/, $line);
+				next unless defined $folderName;
+				$installedPluginCanonicalNames{$folderName} = $canonicalName || $folderName;
+			}
+			last;
+		}
+	}
+
+	# skip installed-plugin folders that already exist on this system
+	# never silently overwrite an already-installed plugin
+	my %skipExistingInstalledPluginFolders;
+	for my $member ($zip->members) {
+		next if _isJunkZipEntry($member->fileName);
+		next unless $member->fileName =~ m{^installedplugins/([^/]+)/};
+		my $folderName = $1;
+		next if exists $skipExistingInstalledPluginFolders{$folderName};
+		my $targetDir = catdir(Slim::Utils::OSDetect::dirsFor('cache'), 'InstalledPlugins', 'Plugins', $folderName);
+		if (-d $targetDir) {
+			$skipExistingInstalledPluginFolders{$folderName} = 1;
+			main::INFOLOG && $log->is_info && $log->info("Skipping restore of installed-plugin folder '$folderName' - already present on this system, not overwriting");
 		}
 	}
 
@@ -860,6 +966,20 @@ sub restoreFromBackup {
 			}
 			next;
 		}
+		if ($fileName eq 'installedplugins/manifest.txt') {
+			next;
+		}
+		if ($fileName =~ m{^installedplugins/([^/]+)/(.+)$}) {
+			my ($folderName, $relPath) = ($1, $2);
+			if ($selectedNamespaces->{"installedplugin_$folderName"} && !$skipExistingInstalledPluginFolders{$folderName}) {
+				my $targetDir = catdir(Slim::Utils::OSDetect::dirsFor('cache'), 'InstalledPlugins', 'Plugins', $folderName);
+				my $content = _extractMemberContent($member);
+				if (defined $content && _safeWriteFile(catfile($targetDir, split(m{/}, $relPath)), $content)) {
+					$restoredInstalledPluginFolders{$folderName} = 1;
+				}
+			}
+			next;
+		}
 
 		my $namespace = _prefsNamespaceForZipEntry($fileName);
 		next unless defined $namespace;
@@ -890,6 +1010,12 @@ sub restoreFromBackup {
 		my ($entry) = grep { $_->{'namespace'} eq "plugin.$shortName" } @OUR_PLUGIN_DATA_FOLDERS;
 		next unless $entry;
 		$anyNamespaceRestored = 1 if _mergePrefsFile("plugin.$shortName", { $entry->{'pathkey'} => $restoredOurPluginFolders{$shortName} }, $prefsDir, $pluginPrefsDir, {}, {});
+	}
+
+	if (%restoredInstalledPluginFolders) {
+		my @pendingCanonicalNames = map { $installedPluginCanonicalNames{$_} || $_ } sort keys %restoredInstalledPluginFolders;
+		$prefs->set('restorependinginstalledplugins', \@pendingCanonicalNames);
+		main::INFOLOG && $log->is_info && $log->info('Restored installed-plugin folder(s), queued for extension manager enablement after next restart: '.join(', ', @pendingCanonicalNames));
 	}
 
 	if ($serverNamespaceRestored) {
@@ -1023,6 +1149,18 @@ sub _requeuePendingRescanAfterRestart {
 	my $request = Slim::Control::Request->new(undef, ['wipecache']);
 	Slim::Music::Import->queueScanTask($request);
 	main::INFOLOG && $log->is_info && $log->info('Re-queued rescan request after restart, following a preferences restore');
+}
+
+sub _enablePendingInstalledPlugins {
+	my $pendingPlugins = $prefs->get('restorependinginstalledplugins');
+	return unless $pendingPlugins && @{$pendingPlugins};
+
+	for my $canonicalName (@{$pendingPlugins}) {
+		eval { Slim::Utils::ExtensionsManager->enablePlugin($canonicalName) };
+		$log->error("Could not enable restored plugin $canonicalName in extension manager: $@") if $@;
+	}
+	main::INFOLOG && $log->is_info && $log->info('Enabled '.scalar(@{$pendingPlugins}).' restored plugin(s) in the extension manager install list: '.join(', ', @{$pendingPlugins}));
+	$prefs->set('restorependinginstalledplugins', []);
 }
 
 sub _isTargetWritable {

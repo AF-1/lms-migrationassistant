@@ -91,6 +91,11 @@ sub handler {
 		$paramRef->{'extrapathduplicate'} = \@extrapathduplicate if @extrapathduplicate;
 	}
 
+	if (defined $paramRef->{'pref_backupinstalledplugins'}) {
+		$prefs->set('backupinstalledplugins', $paramRef->{'pref_backupinstalledplugins'} ? 1 : 0);
+	}
+	$paramRef->{'backupinstalledplugins'} = $prefs->get('backupinstalledplugins');
+
 	if ($paramRef->{'backup'}) {
 		my $selectedfolder = $paramRef->{'pref_backupoutputfolder'};
 		$paramRef->{'backupoutputfolder'} = $selectedfolder;

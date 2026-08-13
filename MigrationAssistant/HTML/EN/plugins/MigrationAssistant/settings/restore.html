@@ -46,7 +46,7 @@
 		[% IF item.category == cat %]
 		<tr>
 			<td><input type="checkbox" data-category="[% item.category %]" name="pref_selected_[% item.namespace %]" id="selected_[% item.idx %]"[% IF item.checked %] checked[% END %] onclick="migaUpdateSelectAllButton()"></td>
-			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label>[% IF item.writable.defined && !item.writable %]<span class="miganotwritable" title="[% (item.pathExists.defined && !item.pathExists ? "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_PATHMISSING" : "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE") | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %]</td>
+			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label>[% IF item.writable.defined && !item.writable %]<span class="miganotwritable" title="[% (item.pathExists.defined && !item.pathExists ? "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_PATHMISSING" : "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE") | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %][% IF item.alreadyinstalled %]<span class="miganotwritable" title="[% 'PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_ALREADYINSTALLED' | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %]</td>
 		</tr>
 		[% END %]
 		[% END %]
@@ -89,6 +89,9 @@
 		[% END %]
 		[% IF restorecategorycounts.ourplugindata %]
 			[% INCLUDE restorecategory cat='ourplugindata' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_OURPLUGINDATA' open=1 togglebutton=1 %]
+		[% END %]
+		[% IF restorecategorycounts.installedplugins %]
+			[% INCLUDE restorecategory cat='installedplugins' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS' togglebutton=1 %]
 		[% END %]
 		[% IF restorecategorycounts.plugin_notinstalled %]
 			[% INCLUDE restorecategory cat='plugin_notinstalled' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_NOTINSTALLED' togglebutton=1 %]

@@ -102,7 +102,7 @@ PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_THIRDPARTY
 	EN	Third-Party Plugins: Settings
 
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_NOTINSTALLED
-	EN	Other Plugins (not installed at backup time): Settings
+	EN	Other Plugins (not currently installed on this system): Settings
 
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_SKIPPREFS
 	EN	Skip preferences during restore (optional)
@@ -202,3 +202,18 @@ PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ERROR
 
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_RESTART_BANNER
 	EN	Migration Assistant has restored preferences. Please restart Lyrion Music Server for the changes to take effect.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS
+	EN	Include installed third-party plugins
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS_DESC
+	EN	If set to YES, the backup will also include the files of any plugin you installed later through the built-in "Manage Plugins" page - not plugins that came pre-installed with LMS, and not plugins you installed manually.<br><br>Automatic restore of these plugin files is possible, but I still recommend installing the plugins you need yourself before restoring, the way you normally would.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS_WARNING
+	EN	Increases backup size. Same-OS restore recommended.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS
+	EN	Installed Plugin Files
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_ALREADYINSTALLED
+	EN	This plugin is already installed on this system. It will be skipped during restore to avoid overwriting the currently installed version.

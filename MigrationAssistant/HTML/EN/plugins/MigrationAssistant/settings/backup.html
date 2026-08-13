@@ -51,6 +51,15 @@
 		[% END %]
 	</table>
 [% END %]
+<br>
+
+[% WRAPPER setting title="PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS" desc="PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS_DESC" %]
+<select class="stdedit" name="pref_backupinstalledplugins" id="backupinstalledplugins">
+	<option [% IF NOT backupinstalledplugins %]selected [% END %]value="0">[% 'NO' | getstring %]</option>
+	<option [% IF backupinstalledplugins %]selected [% END %]value="1">[% 'YES' | getstring %]</option>
+</select>
+<span style="padding-left:8px;color:#b8860b;">[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS_WARNING" | string %]</span>
+[% END %]
 
 <br><br><br>
 
