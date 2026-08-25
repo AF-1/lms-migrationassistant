@@ -43,10 +43,41 @@
 	[% BLOCK restorecategorytable %]
 	<table class="migarestoretable">
 		[% FOREACH item = restorearchivecontents %]
-		[% IF item.category == cat %]
+		[% IF item.category == cat && (!installsource || item.installsource == installsource) %]
 		<tr>
-			<td><input type="checkbox" data-category="[% item.category %]" name="pref_selected_[% item.namespace %]" id="selected_[% item.idx %]"[% IF item.checked %] checked[% END %] onclick="migaUpdateSelectAllButton()"></td>
-			<td class="migarestoretable-item"><label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label>[% IF item.writable.defined && !item.writable %]<span class="miganotwritable" title="[% (item.pathExists.defined && !item.pathExists ? "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_PATHMISSING" : "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE") | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %][% IF item.alreadyinstalled %]<span class="miganotwritable" title="[% 'PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_ALREADYINSTALLED' | string %]">&nbsp;<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>[% END %]</td>
+			<td>
+			<input type="checkbox" data-category="[% item.category %]"[% IF item.installsource %] data-installsource="[% item.installsource %]"[% END %][% IF item.linkednamespace %] data-linkednamespace="[% item.linkednamespace %]"[% END %] name="pref_selected_[% item.namespace %]" id="selected_[% item.idx %]"[% IF item.checked %] checked[% END %][% IF item.alreadyinstalled || item.incompatibleplatform || item.incompatibleversion %] disabled[% END %] onclick="migaOnCheckboxToggle(this)">
+			</td>
+			<td class="migarestoretable-item">
+				<label for="selected_[% item.idx %]">&nbsp;[% item.label %]</label>
+				[% IF item.writable.defined && !item.writable %]
+				<span class="miganotwritable" title="[% (item.pathExists.defined && !item.pathExists ? "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_PATHMISSING" : "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_NOTWRITABLE") | string %]">&nbsp;
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+					</svg>
+				</span>
+				[% END %]
+				[% IF item.alreadyinstalled %]
+				<span class="miganotwritable" title="[% 'PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_ALREADYINSTALLED' | string %]">&nbsp;
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+					</svg>
+				</span>
+				[% END %]
+				[% IF item.incompatibleplatform %]
+				<span class="miganotwritable" title="[% 'PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_INCOMPATIBLE_PLATFORM' | string %]">&nbsp;
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+					</svg>
+				</span>
+				[% ELSIF item.incompatibleversion %]
+				<span class="miganotwritable" title="[% 'PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_INCOMPATIBLE_VERSION' | string %]">&nbsp;
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+					</svg>
+				</span>
+				[% ELSIF item.possiblebinarymismatch %]
+				<span class="miganotwritable" title="[% 'PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_POSSIBLE_BINARY_MISMATCH' | string %]">&nbsp;
+					<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+				</span>
+				[% END %]
+			</td>
 		</tr>
 		[% END %]
 		[% END %]
@@ -58,10 +89,10 @@
 		<summary>
 			[% title | string %]
 			[% IF togglebutton %]
-			<input type="button" class="stdclick migacategorybutton" style="margin-left:10px;" data-category="[% cat %]" value="[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]" onclick="event.preventDefault();event.stopPropagation();migaToggleCategory(this);">
+			<input type="button" class="stdclick migacategorybutton" style="margin-left:10px;" data-category="[% cat %]"[% IF installsource %] data-installsource="[% installsource %]"[% END %] value="[% "PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_DESELECT_ALL" | string %]" onclick="event.preventDefault();event.stopPropagation();migaToggleCategory(this);">
 			[% END %]
 		</summary>
-		[% INCLUDE restorecategorytable cat=cat %]
+		[% INCLUDE restorecategorytable cat=cat installsource=installsource %]
 	</details><br>
 	[% END %]
 
@@ -91,7 +122,17 @@
 			[% INCLUDE restorecategory cat='ourplugindata' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_OURPLUGINDATA' open=1 togglebutton=1 %]
 		[% END %]
 		[% IF restorecategorycounts.installedplugins %]
-			[% INCLUDE restorecategory cat='installedplugins' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS' togglebutton=1 %]
+		<details open>
+			<summary>[% 'PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS' | string %]</summary>
+			<div style="padding-left:20px;">
+				[% IF restoreinstallsourcecounts.extensionmanager %]
+					[% INCLUDE restorecategory cat='installedplugins' installsource='extensionmanager' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS_EXTENSIONMANAGER' open=1 togglebutton=1 %]
+				[% END %]
+				[% IF restoreinstallsourcecounts.manual %]
+					[% INCLUDE restorecategory cat='installedplugins' installsource='manual' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS_MANUAL' open=1 togglebutton=1 %]
+				[% END %]
+			</div>
+		</details><br>
 		[% END %]
 		[% IF restorecategorycounts.plugin_notinstalled %]
 			[% INCLUDE restorecategory cat='plugin_notinstalled' title='PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_PLUGINS_NOTINSTALLED' togglebutton=1 %]
@@ -138,9 +179,39 @@
 		}
 	}
 
+	function migaGetLinkedPrefsCheckbox(checkbox) {
+		var linkedNamespace = checkbox.dataset.linkednamespace;
+		if (!linkedNamespace) {
+			return null;
+		}
+		return document.querySelector('#migarestoretable input[type="checkbox"][name="pref_selected_' + linkedNamespace + '"]');
+	}
+
+	function migaSyncLinkedPrefsCheckbox(checkbox) {
+		var linkedCheckbox = migaGetLinkedPrefsCheckbox(checkbox);
+		if (linkedCheckbox && !linkedCheckbox.disabled) {
+			linkedCheckbox.checked = checkbox.checked;
+		}
+	}
+
+	function migaSyncAllLinkedPrefsCheckboxes() {
+		document.querySelectorAll('#migarestoretable input[type="checkbox"][data-linkednamespace]:not(:disabled)').forEach(function(checkbox) {
+			migaSyncLinkedPrefsCheckbox(checkbox);
+		});
+	}
+
+	function migaOnCheckboxToggle(checkbox) {
+		migaSyncLinkedPrefsCheckbox(checkbox);
+		migaUpdateSelectAllButton();
+	}
+
 	function migaToggleCategory(button) {
-		var category = button.dataset.category;
-		var checkboxes = document.querySelectorAll('input[type="checkbox"][data-category="' + category + '"]');
+		var selector = 'input[type="checkbox"][data-category="' + button.dataset.category + '"]';
+		if (button.dataset.installsource) {
+			selector += '[data-installsource="' + button.dataset.installsource + '"]';
+		}
+		selector += ':not(:disabled)';
+		var checkboxes = document.querySelectorAll(selector);
 		var allChecked = true;
 
 		for (var i = 0; i < checkboxes.length; i++) {
@@ -153,11 +224,12 @@
 		for (var i = 0; i < checkboxes.length; i++) {
 			checkboxes[i].checked = !allChecked;
 		}
+		migaSyncAllLinkedPrefsCheckboxes();
 		migaUpdateSelectAllButton();
 	}
 
 	function migaToggleSelectAll() {
-		var checkboxes = document.querySelectorAll('#migarestoretable input[type="checkbox"]');
+		var checkboxes = document.querySelectorAll('#migarestoretable input[type="checkbox"]:not(:disabled)');
 		var allChecked = true;
 		for (var i = 0; i < checkboxes.length; i++) {
 			if (!checkboxes[i].checked) {
@@ -168,11 +240,12 @@
 		for (var i = 0; i < checkboxes.length; i++) {
 			checkboxes[i].checked = !allChecked;
 		}
+		migaSyncAllLinkedPrefsCheckboxes();
 		migaUpdateSelectAllButton();
 	}
 
 	function migaUpdateSelectAllButton() {
-		var checkboxes = document.querySelectorAll('#migarestoretable input[type="checkbox"]');
+		var checkboxes = document.querySelectorAll('#migarestoretable input[type="checkbox"]:not(:disabled)');
 		var allChecked = true;
 		var anyChecked = false;
 		for (var i = 0; i < checkboxes.length; i++) {
@@ -189,8 +262,17 @@
 		}
 
 		document.querySelectorAll('.migacategorybutton').forEach(function(button) {
-			var category = button.dataset.category;
-			var checkboxes = document.querySelectorAll('input[type="checkbox"][data-category="' + category + '"]');
+			var selector = 'input[type="checkbox"][data-category="' + button.dataset.category + '"]';
+			if (button.dataset.installsource) {
+				selector += '[data-installsource="' + button.dataset.installsource + '"]';
+			}
+			selector += ':not(:disabled)';
+			var checkboxes = document.querySelectorAll(selector);
+
+			button.disabled = checkboxes.length === 0;
+			if (checkboxes.length === 0) {
+				return;
+			}
 
 			var allChecked = true;
 			for (var i = 0; i < checkboxes.length; i++) {

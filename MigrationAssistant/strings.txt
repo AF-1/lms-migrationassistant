@@ -69,6 +69,15 @@ PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_REJECTED
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_EXTRAPATH_DUPLICATE
 	EN	This folder is already backed up automatically as one of your plugins' data folders and doesn't need to be added here:
 
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS
+	EN	Include installed third-party plugins
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS_DESC
+	EN	If set to YES, the backup will also include the files of any third-party plugin you installed through the built-in "Manage Plugins" page or manually - not plugins that came pre-installed with LMS.<br><br>Automatic restore of these plugin files is possible, but I still recommend installing the plugins you need yourself before restoring, the way you normally would.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS_WARNING
+	EN	Increases backup size.
+
 
 
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE
@@ -203,17 +212,24 @@ PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ERROR
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_RESTART_BANNER
 	EN	Migration Assistant has restored preferences. Please restart Lyrion Music Server for the changes to take effect.
 
-PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS
-	EN	Include installed third-party plugins
-
-PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS_DESC
-	EN	If set to YES, the backup will also include the files of any plugin you installed later through the built-in "Manage Plugins" page - not plugins that came pre-installed with LMS, and not plugins you installed manually.<br><br>Automatic restore of these plugin files is possible, but I still recommend installing the plugins you need yourself before restoring, the way you normally would.
-
-PLUGIN_MIGRATIONASSISTANT_SETTINGS_BACKUP_INSTALLEDPLUGINS_WARNING
-	EN	Increases backup size. Same-OS restore recommended.
-
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS
 	EN	Installed Plugin Files
 
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS_EXTENSIONMANAGER
+	EN	Installed via Extension Manager
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_CATEGORY_INSTALLEDPLUGINS_MANUAL
+	EN	Installed Manually
+
 PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_ALREADYINSTALLED
 	EN	This plugin is already installed on this system. It will be skipped during restore to avoid overwriting the currently installed version.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_INCOMPATIBLE_PLATFORM
+	EN	This plugin is not compatible with this system's platform. It will be skipped during restore.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_INCOMPATIBLE_VERSION
+	EN	This plugin requires a newer Lyrion Music Server version than the one currently running on this system. It will be skipped during restore.
+
+PLUGIN_MIGRATIONASSISTANT_SETTINGS_RESTORE_ITEM_POSSIBLE_BINARY_MISMATCH
+	EN	This plugin folder was backed up on a different platform and may contain platform-specific binary files. Please verify it works correctly after restoring.
+

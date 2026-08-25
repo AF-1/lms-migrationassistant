@@ -77,6 +77,10 @@ sub handler {
 				$categoryCounts{$_->{'category'}}++ for @{$archiveContents};
 				$paramRef->{'restorecategorycounts'} = \%categoryCounts;
 
+				my %installSourceCounts;
+				$installSourceCounts{$_->{'installsource'}}++ for grep { $_->{'category'} eq 'installedplugins' } @{$archiveContents};
+				$paramRef->{'restoreinstallsourcecounts'} = \%installSourceCounts;
+
 				if ($paramRef->{'restore'}) {
 					my %selectedNamespaces;
 					for my $item (@{$archiveContents}) {
