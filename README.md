@@ -28,6 +28,21 @@ A backup archive includes:
 
 <br>
 
+### Installed Plugin Files (optional)
+
+By default, a backup only includes plugin *preferences*, not the plugin files themselves. If you also want to back up and restore the actual files of plugins you installed through **Manage Plugins** (the Extension Manager) or manually - not plugins that came pre-installed with LMS - enable this on the backup settings page. This increases backup size.
+
+On restore, you choose which of the backed-up plugins to actually reinstall. A few safeguards apply automatically:
+
+- A plugin already present on the target system is never overwritten. It's skipped and clearly marked.
+- A plugin whose backed-up minimum LMS version or platform doesn't match the target system is skipped and marked as incompatible.
+- If a plugin folder was backed up on a different OS than the one you're restoring to and it looks like it might contain platform-specific binary files, you'll see a warning. The restore itself isn't blocked but it's worth checking that the plugin still works afterwards.
+- Restored plugins are automatically re-enabled after the next restart, same as if you'd just installed them yourself.
+
+This is a convenience feature. **Installing the plugins you need yourself, the normal way, remains the recommended approach.**
+
+<br>
+
 **Not included, on purpose:**
 
 - **`library.db` and `persist.db`** - these aren't backed up. They're large and there's no need: `library.db` is rebuilt correctly by the rescan that follows a fresh install or a restore anyway and the per-track values Migration Assistant does carry over (date added, play count, date last played) are restored directly into `persist.db`. Ratings, extended play count data and play history are better restored through the backup/restore features of Ratings Light and Alternative Play Count, which is why I recommend backing those up separately beforehand.<br><br>
@@ -38,15 +53,26 @@ A backup archive includes:
 
 ## Restore
 
-**Restoring onto a freshly installed server?** Install LMS first and complete the setup wizard, setting your media folder path(s) and playlist folder path. Wait until the initial library scan has **fully** completed. Only then install the plugins you want to use - and only after that, continue with the steps below.
+**Restoring onto a freshly installed server?**
+- Install LMS first and complete the setup wizard, setting your media folder path(s) and playlist folder path.
+- Wait until the initial library scan has **fully** completed.
+- Go to *LMS Settings > Manage Plugins* and install the plugins you want to use, the normal way, at the very least Migration Assistant itself since it's the tool doing the restoring.
+- Only then continue with the steps below.
 
 1. During the restoration process, do not play any songs or modify any settings, as they will remain read-only until the server restarts.<br><br>
 2. Point Migration Assistant at a previously created backup archive.<br><br>
 2. Preview its contents and choose exactly which items to restore - nothing is restored automatically or all-or-nothing.<br><br>
 3. **Immediately after the restore is complete, the server must be restarted. This is mandatory.**<br>If anything you restored requires a *rescan*, you will be notified after the restore completes and must trigger the rescan manually **after restarting the server**.
 
+<br>
 
-Restoring track statistics from a backup created on a different operating system (macOS/Linux/Windows) is supported; a small number of tracks whose file names use characters not allowed on the current operating system may remain unmatched — see the server log for details, or [Restoring backups across operating systems](https://github.com/AF-1/sobras/wiki/Restoring-backups-across-operating-systems) for more info.
+### Restoring across systems
+
+Restoring track statistics from a backup created on a different operating system (macOS/Linux/Windows) is supported. A small number of tracks whose file names use characters not allowed on the current operating system may remain unmatched. See the server log for details or [Restoring backups across operating systems](https://github.com/AF-1/sobras/wiki/Restoring-backups-across-operating-systems) for more info.
+
+Migration Assistant also supports moving to a new system where your music library lives at a different path than before. Per-track values (date added, play count, last played) are matched by each track's path *relative to* your configured media folder, then reapplied against the media folder(s) configured on the target system. This should work even if the absolute path changes, as long as the folder structure underneath it stays the same.
+
+Playlist files are backed up and restored as-is. If a playlist references tracks by absolute path, it will likely still point to the old path after restoring. The **PotPourri**(https://github.com/AF-1/#-potpourri) plugin can export playlist files with an updated path from the source system beforehand, if you need that.
 
 <br><br><br>
 
