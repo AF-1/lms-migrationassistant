@@ -59,6 +59,8 @@ This is a convenience feature. **Installing the plugins you need yourself, the n
 - Go to *LMS Settings > Manage Plugins* and install the plugins you want to use, the normal way, at the very least Migration Assistant itself since it's the tool doing the restoring.
 - Only then continue with the steps below.
 
+<br>
+
 1. During the restoration process, do not play any songs or modify any settings, as they will remain read-only until the server restarts.<br><br>
 2. Point Migration Assistant at a previously created backup archive.<br><br>
 2. Preview its contents and choose exactly which items to restore - nothing is restored automatically or all-or-nothing.<br><br>
@@ -78,11 +80,9 @@ Playlist files are backed up and restored as-is. If a playlist references tracks
 
 ## Installation
 
-- Add the repository URL below at the bottom of `LMS > Settings > Plugins` and click *Apply*:<br>
-[https://raw.githubusercontent.com/AF-1/sobras/main/repos/lmsghonly/public.xml](https://raw.githubusercontent.com/AF-1/sobras/main/repos/lmsghonly/public.xml)
+**Migration Assistant** is available from the LMS plugin library: `LMS > Settings > Manage Plugins`.<br>
 
-- Install the plugin from the added repository at the bottom of the page.
-
+If you want to test a new patch that hasn't made it into a release version yet, you'll have to [install the plugin manually](https://github.com/AF-1/sobras/wiki/Manual-installation-of-LMS-plugins).
 <br><br><br><br>
 
 
