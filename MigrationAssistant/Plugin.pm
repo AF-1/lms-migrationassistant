@@ -21,9 +21,10 @@ use POSIX qw(strftime);
 use Slim::Schema;
 use File::Spec::Functions qw(:ALL);
 use File::Path qw(mkpath);
+use File::Copy qw(move);
 use Archive::Zip qw(:ERROR_CODES);
 use YAML::XS qw(LoadFile);
-use File::Temp qw(tempdir);
+use File::Temp qw(tempdir tempfile);
 use FileHandle;
 use Path::Class;
 use XML::Parser;
@@ -1494,7 +1495,19 @@ sub _isTargetWritable {
 		last if $parentDir eq $dir;
 		$dir = $parentDir;
 	}
-	return ($dir && -w $dir, $pathExists);
+	return (0, $pathExists) unless $dir && -d $dir;
+
+	# actually try to write a file instead of just checking permission bits, which are
+	# unreliable in case of ACLs etc. (see LMS commit 50e5b72, fix for LMS issue #1644)
+	my $testFile;
+	eval {
+		(undef, $testFile) = tempfile('MIGAwritetestXXXX', DIR => $dir, UNLINK => 1);
+	};
+	if ($testFile && -f $testFile) {
+		unlink $testFile;
+		return (1, $pathExists);
+	}
+	return (0, $pathExists);
 }
 
 sub _safeWriteFile {
@@ -1519,7 +1532,8 @@ sub _safeWriteFile {
 		}
 
 		my $bakPath = $destPath.'.bak-'.strftime('%Y%m%d%H%M%S', localtime);
-		unless (rename($destPath, $bakPath)) {
+		# File::Copy::move is more robust than rename() across filesystems/ACLs (see LMS commit 50e5b72)
+		unless (move($destPath, $bakPath)) {
 			$log->error("Could not create BAK of existing file $destPath to $bakPath: $!");
 			return 0;
 		}

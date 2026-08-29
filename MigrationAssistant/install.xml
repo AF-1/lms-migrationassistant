@@ -3,7 +3,7 @@
 	<id>af6e029c-6bf4-284e-1567-3155e53683e0</id>
 	<name>PLUGIN_MIGRATIONASSISTANT</name>
 	<module>Plugins::MigrationAssistant::Plugin</module>
-	<version>1.0.1</version>
+	<version>1.0.2</version>
 	<description>PLUGIN_MIGRATIONASSISTANT_DESC</description>
 	<creator>AF</creator>
 	<optionsURL>plugins/MigrationAssistant/settings/backup.html</optionsURL>
