@@ -1,6 +1,6 @@
 Migration Assistant
 ====
-![Min. LMS Version](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fraw.githubusercontent.com%2FAF-1%2Fsobras%2Fmain%2Frepos%2Flms%2Fpublic.xml&cacheSeconds=172800&query=%2F%2F*%5Blocal-name()%3D'plugin'%20and%20%40name%3D'MigrationAssistant'%5D%2F%40minTarget&prefix=v&label=Min.%20LMS%20Version%20Required&color=darkgreen)<br>
+![Min. LMS Version](https://img.shields.io/badge/dynamic/xml?url=https%3A%2F%2Fraw.githubusercontent.com%2FAF-1%2Fsobras%2Fmain%2Frepos%2Flms%2Fpublic.xml&cacheSeconds=172800&query=%2F%2F*%5Blocal-name()%3D'plugin'%20and%20%40name%3D'MigrationAssistant'%5D%2F%40minTarget&label=Min.%20LMS%20Version%20Required&color=darkgreen)<br>
 
 <img src="MigrationAssistant/HTML/EN/plugins/MigrationAssistant/html/images/miga_icon_svg.png" align="right" width="70px">**Migration Assistant (MIGA)** creates a portable backup of your Lyrion Music Server (LMS) configuration and lets you selectively restore it on the same or a new installation. It's meant for anyone moving LMS to new hardware, a new OS or a fresh install, without having to manually reconfigure everything from scratch.<br clear="right">
 
