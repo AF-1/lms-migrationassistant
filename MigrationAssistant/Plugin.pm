@@ -637,7 +637,7 @@ sub _initTracksPersistentBackup {
 sub _bkpScanFunction {
 	for (my $i = 0; $i < 500 && @bkpPersistentTracks; $i++) {
 		my $persistentTrack = shift(@bkpPersistentTracks);
-		my $remoteFlag = defined($persistentTrack->{'remote'}) ? $persistentTrack->{'remote'} : 0;
+		my $remoteFlag = defined($persistentTrack->{'remote'}) ? $persistentTrack->{'remote'} : (Slim::Music::Info::isFileURL($persistentTrack->{'url'}) ? 0 : 1);
 		my $relFilePath = ($remoteFlag == 0) ? getRelFilePath($persistentTrack->{'url'}) : '';
 
 		eval {
@@ -1497,8 +1497,7 @@ sub _isTargetWritable {
 	}
 	return (0, $pathExists) unless $dir && -d $dir;
 
-	# actually try to write a file instead of just checking permission bits, which are
-	# unreliable in case of ACLs etc. (see LMS commit 50e5b72, fix for LMS issue #1644)
+	# actually try to write a file instead of just checking permission bits, which are unreliable in case of ACLs etc. (see LMS commit 50e5b72, fix for LMS issue #1644)
 	my $testFile;
 	eval {
 		(undef, $testFile) = tempfile('MIGAwritetestXXXX', DIR => $dir, UNLINK => 1);
@@ -1801,22 +1800,21 @@ sub _tpHandleEndElement {
 		my $fullTrackURL = Encode::decode('utf8', unescape($fullTrackURLraw));
 
 		# encode_locale() matches whatever byte encoding this LMS instance itself used when it scanned
-		# local files (UTF-8 on Linux/macOS, the active ANSI codepage on Windows) - falls back to plain
-		# UTF-8 encoding on LMS versions that lack this function
+		# local files (UTF-8 on Linux/macOS, the active ANSI codepage on Windows) - falls back to plain UTF-8 encoding on LMS versions that lack this function
 		my $encodeForLocalPath = Slim::Utils::Unicode->can('encode_locale') ? \&Slim::Utils::Unicode::encode_locale : sub { return Encode::encode('utf8', $_[0]); };
 
 		# a Windows source backup names its own codepage; without that field, still try the common
 		# Western default unless the source is positively known to be non-Windows (Darwin/Linux)
 		my $sourceCodepage = $tpBackupSourceCodepage || ((!defined $tpBackupSourceOS || $tpBackupSourceOS eq 'Windows') ? 'cp1252' : undef);
 
-		# builds NFC and NFD variants from already-decoded text, re-encoded for this machine's locale;
+		# builds NFC and NFD variants from already-decoded text, re-encoded for this machine's locale.
 		# $isFullURL also runs the result back through fileURLFromPath/pathFromFileURL for full URLs
 		my $buildNfcNfdVariants = sub {
 			my ($decodedText, $isFullURL) = @_;
 			return (undef, undef) unless defined $decodedText;
 			my $nfc = $encodeForLocalPath->(Unicode::Normalize::NFC($decodedText));
 			my $nfd = $encodeForLocalPath->(Unicode::Normalize::NFD($decodedText));
-			if ($isFullURL) {
+			if ($isFullURL && Slim::Music::Info::isFileURL($nfc)) {
 				$nfc = Slim::Utils::Misc::fileURLFromPath(Slim::Utils::Misc::pathFromFileURL($nfc));
 				$nfd = Slim::Utils::Misc::fileURLFromPath(Slim::Utils::Misc::pathFromFileURL($nfd));
 			}
@@ -1829,9 +1827,8 @@ sub _tpHandleEndElement {
 
 			($fullTrackURLnfc, $fullTrackURLnfd) = $buildNfcNfdVariants->(Encode::decode('utf8', $fullTrackURLrawBytes), 1);
 
-			# a Windows source may have written its own file:// URL using the active ANSI codepage
-			# instead of UTF-8 (e.g. a single 0xE3 byte for one accented character) - decode with that
-			# codepage instead of UTF-8, then build the same NFC/NFD variants as above
+			# a Windows source may have written its own file:// URL using the active ANSI codepage instead of UTF-8 (e.g. a single 0xE3 byte for one accented character)
+			# decode with that codepage instead of UTF-8, then build the same NFC/NFD variants as above
 			if ($sourceCodepage) {
 				my $fullTrackURLcpDecoded = eval { Encode::decode($sourceCodepage, $fullTrackURLrawBytes) };
 				main::DEBUGLOG && $log->is_debug && $log->debug("Could not decode full track URL as $sourceCodepage: $@") if $@;
@@ -1844,9 +1841,9 @@ sub _tpHandleEndElement {
 			$relTrackURL = Encode::decode('utf8', unescape($relTrackURLraw));
 			$relTrackURL =~ s/^\.\///;
 
-			# second unescape pass fully resolves double-encoded backup entries down to raw bytes;
-			# NFC/NFD-normalizes to cover both migration directions (macOS decomposes, most other
-			# filesystems compose), re-encoded for this machine's locale for a consistent fileURLFromPath() call
+			# second unescape pass fully resolves double-encoded backup entries down to raw bytes.
+			# NFC/NFD-normalizes to cover both migration directions (macOS decomposes, most other filesystems compose)
+			# re-encoded for this machine's locale for a consistent fileURLFromPath() call
 			my $relTrackURLrawBytes = unescape(unescape($relTrackURLraw));
 			my $relTrackURLdecoded = Encode::decode('utf8', $relTrackURLrawBytes);
 			$relTrackURLdecoded =~ s/^\.\///;
@@ -2023,14 +2020,15 @@ sub getBackupCodepage {
 
 sub getRelFilePath {
 	my $fullTrackURL = shift;
+	return unless Slim::Music::Info::isFileURL($fullTrackURL);
 	my $relFilePath;
 	my $lmsmusicdirs = getMusicDirs();
 	main::DEBUGLOG && $log->is_debug && $log->debug('Valid LMS music dirs = '.Data::Dump::dump($lmsmusicdirs));
+	my $fullTrackPath = Slim::Utils::Misc::pathFromFileURL($fullTrackURL);
+	my $dirSep = File::Spec->canonpath("/");
 
 	foreach (@{$lmsmusicdirs}) {
-		my $dirSep = File::Spec->canonpath("/");
 		my $mediaDirPath = $_.$dirSep;
-		my $fullTrackPath = Slim::Utils::Misc::pathFromFileURL($fullTrackURL);
 		my $match = checkInFolder($fullTrackPath, $mediaDirPath);
 
 		main::DEBUGLOG && $log->is_debug && $log->debug("Full file path \"$fullTrackPath\" is".($match == 1 ? "" : " NOT")." part of media dir \"".$mediaDirPath."\"");
