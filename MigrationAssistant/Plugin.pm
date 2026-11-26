@@ -635,6 +635,23 @@ sub _initTracksPersistentBackup {
 }
 
 sub _bkpScanFunction {
+	my $more = eval { _bkpScanChunk() };
+	return $more unless $@;
+	$log->error("Error during tracks_persistent backup: $@");
+	close($bkpOutput) if $bkpOutput;
+	$bkpOutput = undef;
+	@bkpPersistentTracks = ();
+	$bkpErrors++;
+	if ($bkpZip) {
+		_finishBackup(0);
+	} else {
+		$prefs->set('backuprestoreresult', 2);
+		$prefs->set('status_backuprestore', 0);
+	}
+	return 0;
+}
+
+sub _bkpScanChunk {
 	for (my $i = 0; $i < 500 && @bkpPersistentTracks; $i++) {
 		my $persistentTrack = shift(@bkpPersistentTracks);
 		my $remoteFlag = defined($persistentTrack->{'remote'}) ? $persistentTrack->{'remote'} : (Slim::Music::Info::isFileURL($persistentTrack->{'url'}) ? 0 : 1);
